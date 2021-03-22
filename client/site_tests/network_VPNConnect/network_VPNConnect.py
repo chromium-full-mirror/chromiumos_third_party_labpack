@@ -30,6 +30,29 @@ class network_VPNConnect(test.test):
     CLIENT_ADDRESS = '10.9.8.2'
     NETWORK_PREFIX = 24
 
+    class PortalDetectionDisabledContext(object):
+        """Context in which ethernet is removed from portal detection technology
+        list."""
+
+        def __init__(self, proxy):
+            self._proxy = proxy
+
+        def __enter__(self):
+            try:
+                self._proxy.set_dbus_property(
+                        self._proxy.manager,
+                        self._proxy.MANAGER_PROPERTY_CHECK_PORTAL_LIST,
+                        "wifi,cellular")
+            except Exception:
+                pass
+            return self
+
+        def __exit__(self, exception, value, traceback):
+            self._proxy.set_dbus_property(
+                    self._proxy.manager,
+                    self._proxy.MANAGER_PROPERTY_CHECK_PORTAL_LIST,
+                    "ethernet,wifi,cellular")
+
     def get_device(self, interface_name):
         """Finds the corresponding Device object for an ethernet
         interface with the name |interface_name|.
@@ -176,14 +199,14 @@ class network_VPNConnect(test.test):
     def connect_vpn(self):
         """Connects the client to the VPN server."""
         proxy = self._shill_proxy
-        with tpm_store.TPMStore() as tpm:
-            service = proxy.configure_service(
-                self.get_vpn_client_properties(tpm))
-            service.Connect()
-            result = proxy.wait_for_property_in(service,
-                                                proxy.SERVICE_PROPERTY_STATE,
-                                                ('ready', 'online'),
-                                                self.CONNECT_TIMEOUT_SECONDS)
+        with self.PortalDetectionDisabledContext(proxy):
+            with tpm_store.TPMStore() as tpm:
+                service = proxy.configure_service(
+                        self.get_vpn_client_properties(tpm))
+                service.Connect()
+                result = proxy.wait_for_property_in(
+                        service, proxy.SERVICE_PROPERTY_STATE,
+                        ('ready', 'online'), self.CONNECT_TIMEOUT_SECONDS)
         (successful, _, _) = result
         if not successful and self._expect_success:
             raise error.TestFail('VPN connection failed')
