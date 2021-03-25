@@ -36,12 +36,13 @@ from autotest_lib.server.cros.dynamic_suite import suite
 try:
     from autotest_lib.utils.frozen_chromite.lib import metrics
     from autotest_lib.utils.frozen_chromite.lib import cloud_trace
-except ImportError:
+    logging.debug("Using real metrics")
+except ImportError as e:
     from autotest_lib.client.common_lib import utils as common_utils
     metrics = common_utils.metrics_mock
     import mock
     cloud_trace = mock.MagicMock()
-
+    logging.debug("Using fake metrics because %s", e)
 _CONFIG = global_config.global_config
 
 # Number of seconds to wait before returning if testing mode is enabled
