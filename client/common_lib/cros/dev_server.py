@@ -709,9 +709,11 @@ class DevServer(object):
 
 
     @classmethod
-    def get_available_devservers(cls, hostname=None,
+    def get_available_devservers(cls,
+                                 hostname=None,
                                  prefer_local_devserver=PREFER_LOCAL_DEVSERVER,
-                                 restricted_subnets=utils.RESTRICTED_SUBNETS):
+                                 restricted_subnets=utils.RESTRICTED_SUBNETS,
+                                 all_p2p_subnets=utils.P2P_SUBNETS):
         """Get devservers in the same subnet of the given hostname.
 
         @param hostname: Hostname of a DUT to choose devserver for.
@@ -734,20 +736,31 @@ class DevServer(object):
         if not host_ip:
             return cls.get_unrestricted_devservers(restricted_subnets), False
 
-        # Go through all restricted subnet settings and check if the DUT is
-        # inside a restricted subnet. If so, only return the devservers in the
-        # restricted subnet and doesn't allow retry.
+        # Go through all restricted subnet settings (and its peers) and check
+        # if the DUT is inside a restricted subnet. If so, only return the
+        # devservers in the restricted subnet and doesn't allow retry.
         if host_ip and restricted_subnets:
+            subnets = set()
             subnet_ip, mask_bits = _get_subnet_for_host_ip(
                     host_ip, restricted_subnets=restricted_subnets)
             if subnet_ip:
-                logging.debug('The host %s (%s) is in a restricted subnet. '
-                              'Try to locate a devserver inside subnet '
-                              '%s:%d.', hostname, host_ip, subnet_ip,
-                              mask_bits)
-                devservers = cls.get_devservers_in_same_subnet(
-                        subnet_ip, mask_bits)
-                return devservers, False
+                subnets.add((subnet_ip, mask_bits))
+            p2p_subnets = _get_p2p_subnets_for_host_ip(
+                    host_ip, all_p2p_subnets=all_p2p_subnets)
+            if p2p_subnets:
+                subnets = subnets.union(p2p_subnets)
+            if subnets:
+                devservers = set()
+                for ip, mask in subnets:
+                    logging.debug(
+                            'The host %s (%s) is in a restricted subnet '
+                            '(or its peers). '
+                            'Try to locate devservers inside subnet '
+                            '%s:%d.', hostname, host_ip, ip, mask)
+                    devservers = devservers.union(
+                            cls.get_devservers_in_same_subnet(ip, mask))
+                return list(devservers), False
+
 
         # If prefer_local_devserver is set to True and the host is not in
         # restricted subnet, pick a devserver in the same subnet if possible.
@@ -1124,7 +1137,7 @@ class ImageServerBase(DevServer):
                                      'the call: %s' % (self.url(), call))
 
         if expected_response and not response == expected_response:
-                raise DevServerException(error_message)
+            raise DevServerException(error_message)
 
         # `os_type` is needed in build a devserver call, but not needed for
         # wait_for_artifacts_staged, since that method is implemented by
@@ -2009,6 +2022,23 @@ def _get_subnet_for_host_ip(host_ip,
             return subnet_ip, mask_bits
 
     return None, None
+
+
+def _get_p2p_subnets_for_host_ip(host_ip, all_p2p_subnets=None):
+    """Get the p2p subnets for a given host IP.
+
+    @param host_ip: the IP of a DUT.
+    @param all_p2p_subnets: A two level list of p2p subnets.
+
+    @return: a list of (subnet_ip, mask_bits) tuple. If no matched p2p subnets
+             for the host_ip, return [].
+    """
+    for subnets in all_p2p_subnets or []:
+        subnet, _ = _get_subnet_for_host_ip(host_ip,
+                                            restricted_subnets=subnets)
+        if subnet:
+            return subnets
+    return []
 
 
 def get_least_loaded_devserver(devserver_type=ImageServer, hostname=None):

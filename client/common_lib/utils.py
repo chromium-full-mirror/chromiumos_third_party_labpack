@@ -20,7 +20,7 @@ import collections
 import datetime
 import errno
 import inspect
-import itertools
+import json
 import logging
 import os
 import pickle
@@ -1949,6 +1949,27 @@ def _setup_restricted_subnets():
         RESTRICTED_SUBNETS.append((ip, int(mask_bits)))
 
 _setup_restricted_subnets()
+
+
+# A two level list of subnets, e.g. '[["1.1.1.0/24","1.1.2.0/24"],
+# ["1.2.1.0/24", "1.2.2.0/24"]]'. Each element of the list is a list of subnets
+# which can communicate with each other (i.e. p2p subnets).
+P2P_SUBNETS = []
+
+
+def _setup_p2p_subnets():
+    subnets_raw = CONFIG.get_config_value('CROS', 'p2p_subnets', default='[]')
+    subnets = json.loads(subnets_raw)
+    for group in subnets:
+        p2p_group = []
+        for s in group:
+            ip, mask = s.split('/')
+            p2p_group.append((ip, int(mask)))
+        P2P_SUBNETS.append(p2p_group)
+
+
+_setup_p2p_subnets()
+
 
 # regex pattern for CLIENT/wireless_ssid_ config. For example, global config
 # can have following config in CLIENT section to indicate that hosts in subnet
