@@ -96,6 +96,7 @@ def _check_rpm_power_delivery_with_battery(host):
             )
             raise Exception(msg)
 
+    logging.debug('Starting RPM check for device with battery')
     logging.info("Cutting down wall power for %s...", host.hostname)
     _set_power_off(host)
     validate_power_state(False, host.WAIT_DOWN_REBOOT_TIMEOUT)
@@ -112,6 +113,7 @@ def _check_rpm_power_delivery_without_battery(host):
     Verification based on check if device online or offline.
     @param host: any host with has host_info_store field
     """
+    logging.debug('Starting RPM check for device without battery')
     logging.info("Cutting down wall power for %s...", host.hostname)
     _set_power_off(host)
     if not host.wait_down(timeout=host.WAIT_DOWN_REBOOT_TIMEOUT):
@@ -154,31 +156,35 @@ def verify_unsafe(host):
         logging.info("RPM config is not present. Skipping check.")
         return
 
-    # In the lab we need trust that host-info will be correct.
-    power_info = host.host_info_store.get().get_label_value('power')
-    if not power_info:
-        raise error.AutoservError(
-                'Could not detect power-info in host-info. The information'
-                ' has to be provided by manufacture configs. Please file'
-                ' the bug agains Fleet Inventory')
-    has_battery = power_info == 'battery'
-
-    # Verify host-info against manufactory configs
     try:
-        info = host.get_power_supply_info()
+        dut_power_info = host.get_power_supply_info()
     except Exception as e:
         logging.debug('(Not critical) %s', e)
-        raise error.AutoservError('Could not detect power supply info')
-    if 'Battery' in info:
-        if not has_battery:
-            raise error.AutoservError(
-                    'Unexpected detected battery on the device')
-    elif has_battery:
         raise error.AutoservError(
-                'Battery is not detected on the device. But expected')
+                'Could not detect power supply info from DUT')
+
+    # In the lab we need trust that host-info will be correct.
+    # Verification is not critical as the label-power can be missing for
+    # new deployment.
+    power_info = host.host_info_store.get().get_label_value('power')
+    if power_info:
+        expecting_battery = power_info.lower() == 'battery'
+        # Verify host-info against manufactory configs
+        if 'Battery' in dut_power_info:
+            if not expecting_battery:
+                logging.warning('Unexpected detected battery on the device')
+        elif expecting_battery:
+            logging.warning(
+                    'Battery is not detected on the device. But expected')
+    else:
+        logging.info(
+                'Could not detect label-power in host-info. The information'
+                ' has to be provided by manufacture configs. Please file'
+                ' the bug agains Fleet Inventory')
+
     # Try to use RPM config to confirm tha information is correct.
     try:
-        if has_battery:
+        if 'Battery' in dut_power_info:
             _check_rpm_power_delivery_with_battery(host)
         else:
             _check_rpm_power_delivery_without_battery(host)
