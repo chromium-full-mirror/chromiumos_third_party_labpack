@@ -1484,7 +1484,8 @@ class RecoverACPowerRepair(_ResetRepairAction):
         except Exception as e:
             logging.debug('(Not critical) %s', e)
             raise hosts.AutoservRepairError(
-                    'Fail to read battery metrics from EC')
+                    'Fail to read battery metrics from EC',
+                    'recovery-ac-power')
         # Simple off-on not always working stable in all cases as source-sink
         # not working too in another cases. To cover more cases here we do
         # both toggle to recover PD negotiation.
