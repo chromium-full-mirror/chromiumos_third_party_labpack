@@ -49,6 +49,7 @@ import common
 from autotest_lib.client.common_lib import global_config
 from autotest_lib.client.common_lib import hosts
 from autotest_lib.server import afe_utils
+from autotest_lib.server.cros import provisioner
 from autotest_lib.server.hosts import repair_utils
 from autotest_lib.server.hosts import cros_constants
 
@@ -225,6 +226,18 @@ class FirmwareRepair(hosts.RepairAction):
         host.run('crossystem disable_dev_request=1', ignore_status=True)
         host.reboot()
 
+    def _request_for_reimage_host_to_stable_version(self, host):
+        """Place request to re-image the host to the stable version.
+
+        Request will be placed by mimic PROVISION_FAILED flow.
+        @params host:   CrosHost instance
+        """
+        os_from_host = host.get_release_builder_path()
+        os_from_host_info = host.get_cros_repair_image_name()
+        if os_from_host != os_from_host_info:
+            host.run('touch %s' % provisioner.PROVISION_FAILED)
+            logging.debug('Placed request to re-image the host!')
+
 
 class FaftFirmwareRepair(FirmwareRepair):
     """
@@ -269,6 +282,7 @@ class GeneralFirmwareRepair(FirmwareRepair):
                     'Failed to find stable_version from host_info.',
                     'cannot find stable_version')
         self._run_general_repair(host, build)
+        self._request_for_reimage_host_to_stable_version(host)
 
     def _is_applicable(self, host):
         if _is_firmware_testing_device(host):
@@ -285,16 +299,6 @@ class GeneralFirmwareRepair(FirmwareRepair):
             logging.info('Device health profile is not available, cannot'
                          ' determine if firmware repair is needed.')
             return False
-        repair_fail_count = dhp.get_repair_fail_count()
-        if repair_fail_count < 2:
-            # We want to start with a more conservative strategy, so only try
-            # this action on DUTs that failed repair at least twice.
-            # @TODO(xianuowang@) adjust or remove this threshold.
-            logging.info(
-                    'Firmware repair will only applies to DUT that'
-                    ' failed at least two AdminRepair, current fail'
-                    ' count: %s', repair_fail_count)
-            return False
         flashed_build = dhp.get_firmware_stable_version()
         candidate_build = self._get_os_stable_build(host)
         # If we had an success firmware flash in this repair loop,
@@ -310,6 +314,23 @@ class GeneralFirmwareRepair(FirmwareRepair):
             logging.info(
                     'Firmware from %s has been attempted and failed 3 '
                     'times, no need to retry.', flashed_build)
+            return False
+        repair_fail_count = dhp.get_repair_fail_count()
+        if host.is_smart_usbhub_present() and repair_fail_count == 0:
+            # We want to update fw on the DUT if it has smart-hub in setup
+            # and all other repair flow failed to recover ssh access.
+            # Present smart-hub on setup allow us to be sure that servo
+            # power-cycled and known issue is on the DUT.
+            # @TODO(otabek@) adjust or remove this threshold.
+            return True
+        if repair_fail_count < 2:
+            # We want to start with a more conservative strategy, so only try
+            # this action on DUTs that failed repair at least twice.
+            # @TODO(xianuowang@) adjust or remove this threshold.
+            logging.info(
+                    'Firmware repair will only applies to DUT that'
+                    ' failed at least two AdminRepair, current fail'
+                    ' count: %s', repair_fail_count)
             return False
         return True
 

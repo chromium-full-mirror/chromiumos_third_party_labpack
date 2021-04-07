@@ -1357,6 +1357,11 @@ class CrosHost(abstract_ssh.AbstractSSHHost):
                              audit_const.HW_STATE_NORMAL,
                              audit_const.HW_STATE_UNKNOWN)
 
+    def is_smart_usbhub_present(self):
+        """Check id smart-hub is present in setup."""
+        host_info = self.host_info_store.get()
+        return servo_constants.SMART_USBHUB_LABEL in host_info.labels
+
     def _set_smart_usbhub_label(self, smart_usbhub_detected):
         if smart_usbhub_detected is None:
             # skip the label update here as this indicate we wasn't able
