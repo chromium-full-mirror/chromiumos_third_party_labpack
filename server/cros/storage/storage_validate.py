@@ -314,7 +314,7 @@ class StorageStateValidator(object):
             # cannot continue if storage was not detected
             return
         logging.info("Running readonly badblocks check; path=%s", path)
-        cmd = 'badblocks -e 1 -s -b 512 %s' % path
+        cmd = 'badblocks -e 100 -s -b 512 %s' % path
         try:
             # set limit in 1 hour but expecting to finish it up 30 minutes
             cmd_result = self._host.run(cmd, ignore_status=True, timeout=3600)
@@ -342,7 +342,7 @@ class StorageStateValidator(object):
             # cannot continue if storage was not detected
             return
         logging.info("Running read-write badblocks check; path=%s", path)
-        cmd = 'badblocks -e 1 -nsv -b 4096 %s' % path
+        cmd = 'badblocks -e 100 -nsv -b 4096 %s' % path
         try:
             # set limit in 90 minutes but expecting to finish it up 50 minutes
             cmd_result = self._host.run(cmd, ignore_status=True, timeout=5400)
