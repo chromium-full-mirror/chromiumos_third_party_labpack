@@ -316,13 +316,6 @@ class GeneralFirmwareRepair(FirmwareRepair):
                     'times, no need to retry.', flashed_build)
             return False
         repair_fail_count = dhp.get_repair_fail_count()
-        if host.is_smart_usbhub_present() and repair_fail_count == 0:
-            # We want to update fw on the DUT if it has smart-hub in setup
-            # and all other repair flow failed to recover ssh access.
-            # Present smart-hub on setup allow us to be sure that servo
-            # power-cycled and known issue is on the DUT.
-            # @TODO(otabek@) adjust or remove this threshold.
-            return True
         if repair_fail_count < 2:
             # We want to start with a more conservative strategy, so only try
             # this action on DUTs that failed repair at least twice.
