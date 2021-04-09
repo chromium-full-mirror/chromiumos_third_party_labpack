@@ -1,0 +1,242 @@
+#!/bin/bash
+
+# MAINTAINER: gregorynisbet
+# This program must check its environment for dependencies BEFORE running.
+# This program is intended for interactive use.# This program does not have a stable API, use at own risk.
+
+# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+set -o pipefail
+
+short_usage_doc="\
+commands: {l,d,e,c,s,sl,getall,recgetall,h}"
+
+usage_doc="\
+Connect to various consoles on a DUT.
+
+dutconnect l DUTNAME -- connect to labstation
+dutconnect d DUTNAME -- ssh to DUT
+dutconnect e DUTNAME -- connect to EC console
+dutconnect c DUTNAME -- connect to CPU console
+dutconnect s DUTNAME -- connect to servo console
+dutconnect sl DUTNAME -- get latest servo logs
+dutconnect getall DUTNAME -- get all dut-control settings
+dutconnect recgetall DUTNAME --
+        get all dut-control settings with servod started in recovery mode"
+
+# dutconnect is a program that connects you to DUTs.
+
+# die -- write message with newline and exit 1
+die() {
+    1>&2 printf '%s\n' "$@"
+    exit 1
+}
+
+# printlin -- write a message on a line by itself
+println() {
+    printf '%s\n' "$@"
+}
+
+# check for external dependencies on the path.
+1>/dev/null type -- mktemp  || die 'no mktemp!'
+1>/dev/null type -- ssh     || die 'no ssh!'
+1>/dev/null type -- shivas  || die 'no shivas!'
+1>/dev/null type -- grep    || die 'no grep!'
+1>/dev/null type -- awk     || die 'no awk!'
+1>/dev/null type -- head    || die 'no head!'
+1>/dev/null type -- tail    || die 'no tail!'
+1>/dev/null type -- tr      || die 'no tr!'
+1>/dev/null type -- python3 || die 'no python3!'
+
+
+# _mktemp -- create a single temporary directory
+tmp=''
+_mktemp() {
+    if test -n "$tmp"; then
+        : "do nothing"
+    else
+        tmp="$(mktemp -d)"
+    fi
+    println "$tmp"
+}
+
+# extract arguments
+typ="$1"
+dut="$2"
+
+# validate arguments
+if test "$typ" = "h"; then
+        : "do nothing"
+else
+        test -n "$typ" || { println "$short_usage_doc"; die 'need resource type!';}
+        test -n "$dut" || { println "$short_usage_doc"; die 'need dut!'; }
+fi
+
+
+# set_servo_vars dut
+#
+# sets global variables beginning with servo_ for the device in question.
+set_servo_vars() {
+    local di;
+    di="$(_mktemp)"/dutinfo.json || return 1
+    shivas get dut -json "$1" | python3 -m json.tool > "$di" || return 1
+    servo_host="$(<"$di" grep -- '"servoHostname"' | head -n 1 | awk '{print $2}' | tr -d '",')"
+    servo_port="$(<"$di" grep -- '"servoPort"' | head -n 1 | awk '{print $2}' | tr -d '",')"
+    servo_serial="$(<"$di" grep -- '"servoSerial"' | head -n 1 | awk '{print $2}' | tr -d '",')"
+}
+
+
+case "$typ" in
+    d)
+        # ssh to the DUT
+        ssh -tt "$dut"
+        ;;
+    l)
+        set_servo_vars "$dut"
+        # helpfully print servo info!
+        echo "host=${servo_host}"
+        echo "port=${servo_port}"
+        echo "serial=${servo_serial}"
+        # potentially not safe against strategically chosen servo_hosts and servo_ports
+        # but hey, it's a shell script
+        ssh -tt "$servo_host" "exec env host=${servo_host} port=${servo_port} serial=${servo_serial} /bin/bash -i"
+        ;;
+    e)
+        # get the EC uart
+        set_servo_vars "$dut"
+
+        # print useful info in case we fall back
+        echo "host=${servo_host}"
+        echo "port=${servo_port}"
+        echo "serial=${servo_serial}"
+        # try to start servod
+        # NOTE: this is not very sophisticated. We don't check if servod is already running, we just
+        # try to start it in the background.
+        # NOTE: we sleep for ten seconds defensively
+        # NOTE: miniterm.py exits 0 when quit. that's the only reason this whole thing works
+        ssh -tt "$servo_host" "
+            status servod PORT=${servo_port} && echo 'started already'
+            start servod PORT=${servo_port} REC_MODE=1 &
+            g() {
+                dut-control -p ${servo_port} ec_uart_pty
+            }
+
+            g || (sleep 5; g) || (sleep 5; g) || (sleep 5; g)
+
+            f() {
+                minicom --device \$( dut-control -p ${servo_port} ec_uart_pty | awk -F: '{print \$2}' )
+            }
+
+            f || exit 20
+        "
+        ;;
+    c)
+        # get the CPU console
+        set_servo_vars "$dut"
+
+        # print useful info in case we fall back
+        echo "host=${servo_host}"
+        echo "port=${servo_port}"
+        echo "serial=${servo_serial}"
+        # try to start servod
+        # NOTE: this is not very sophisticated. We don't check if servod is already running, we just
+        # try to start it in the background.
+        # NOTE: we sleep for ten seconds defensively
+        # NOTE: miniterm.py exits 0 when quit. that's the only reason this whole thing works
+        ssh -tt "$servo_host" "
+            status servod PORT=${servo_port} && echo 'started already'
+            start servod PORT=${servo_port} REC_MODE=1 &
+            g() {
+                dut-control -p ${servo_port} cpu_uart_pty
+            }
+
+            g || (sleep 5; g) || (sleep 5; g) || (sleep 5; g)
+
+            f() {
+                minicom --device \$( dut-control -p ${servo_port} cpu_uart_pty | awk -F: '{print \$2}' )
+            }
+
+            f || exit 20
+        "
+        ;;
+
+
+    s)
+        # get the servo console
+        set_servo_vars "$dut"
+
+        # print useful info in case we fall back
+        echo "host=${servo_host}"
+        echo "port=${servo_port}"
+        echo "serial=${servo_serial}"
+        # try to start servod
+        # NOTE: this is not very sophisticated. We don't check if servod is already running, we just
+        # try to start it in the background.
+        # NOTE: we sleep for ten seconds defensively
+        # NOTE: miniterm.py exits 0 when quit. that's the only reason this whole thing works
+        ssh -tt "$servo_host" "
+            status servod PORT=${servo_port} && echo 'started already'
+            start servod PORT=${servo_port} REC_MODE=1 &
+            g() {
+                dut-control -p ${servo_port} servo_v4_uart_pty
+            }
+
+            g || (sleep 5; g) || (sleep 5; g) || (sleep 5; g)
+
+            f() {
+                minicom --device \$( dut-control -p ${servo_port} servo_v4_uart_pty | awk -F: '{print \$2}' )
+            }
+
+            f || exit 20
+        "
+        ;;
+    sl)
+        # get the servo logs
+        set_servo_vars "$dut"
+        # write the latest.INFO file from the servo log.
+        ssh -tt "$servo_host" "
+/bin/cat < /var/log/servod_${servo_port}/latest.INFO
+"
+        ;;
+    getall)
+        # get all the dut-control settings
+        set_servo_vars "$dut"
+        ssh -tt "$servo_host" "
+
+status servod PORT=${servo_port} && echo started already
+start servod PORT=${servo_port} &
+
+g() {
+    dut-control -p ${servo_port} ec_board
+}
+
+g || (sleep 5; g) || (sleep 5; g) || (sleep 5; g)
+
+dut-control -p ${servo_port} --get-all"
+        ;;
+
+    recgetall)
+        # get all the dut-control settings
+        # wrap the backgrounded servo in a 5m timeout script
+        set_servo_vars "$dut"
+        ssh -tt "$servo_host" "
+
+stop servod PORT=${servo_port}
+(timeout 5m servod --debug --port=${servo_port} --serial=${servo_serial} --recovery_mode)&
+
+sleep 10
+
+g() {
+    dut-control -p ${servo_port} ec_board
+}
+
+g || (sleep 5; g) || (sleep 5; g) || (sleep 5; g)
+
+dut-control -p ${servo_port} --get-all"
+        ;;
+        h)
+                println "$usage_doc"
+                exit 0
+esac
