@@ -1932,43 +1932,51 @@ DEFAULT_OFFLOAD_GSURI = CONFIG.get_config_value(
 _MOBLAB_ETH_0 = 'eth0'
 _MOBLAB_ETH_1 = 'eth1'
 
+
+def _parse_subnet(subnet_str):
+    """Parse a subnet string to a (ip, mask) tuple."""
+    ip, mask = subnet_str.split('/')
+    return ip, int(mask)
+
+
 # A list of subnets that requires dedicated devserver and drone in the same
 # subnet. Each item is a tuple of (subnet_ip, mask_bits), e.g.,
 # ('192.168.0.0', 24))
 RESTRICTED_SUBNETS = []
 
+
 def _setup_restricted_subnets():
     restricted_subnets_list = CONFIG.get_config_value(
             'CROS', 'restricted_subnets', type=list, default=[])
-    # TODO(dshi): Remove the code to split subnet with `:` after R51 is
-    # off stable channel, and update shadow config to use `/` as
-    # delimiter for consistency.
-    for subnet in restricted_subnets_list:
-        ip, mask_bits = subnet.split('/') if '/' in subnet \
-                        else subnet.split(':')
-        RESTRICTED_SUBNETS.append((ip, int(mask_bits)))
+    global RESTRICTED_SUBNETS
+    RESTRICTED_SUBNETS = [_parse_subnet(s) for s in restricted_subnets_list]
+
 
 _setup_restricted_subnets()
 
 
 # A two level list of subnets, e.g. '[["1.1.1.0/24","1.1.2.0/24"],
-# ["1.2.1.0/24", "1.2.2.0/24"]]'. Each element of the list is a list of subnets
-# which can communicate with each other (i.e. p2p subnets).
-P2P_SUBNETS = []
+# ["1.2.1.0/24", "1.2.2.0/24"]]'. Each element of it is either a singleton list
+# of a restricted subnet, or a list of subnets which can communicate with each
+# other (i.e. p2p subnets).
+ALL_SUBNETS = []
 
 
-def _setup_p2p_subnets():
-    subnets_raw = CONFIG.get_config_value('CROS', 'p2p_subnets', default='[]')
-    subnets = json.loads(subnets_raw)
-    for group in subnets:
-        p2p_group = []
-        for s in group:
-            ip, mask = s.split('/')
-            p2p_group.append((ip, int(mask)))
-        P2P_SUBNETS.append(p2p_group)
+def _setup_all_subnets():
+    all_subnets_raw = CONFIG.get_config_value('CROS',
+                                              'p2p_subnets',
+                                              default='[]')
+    all_subnets = json.loads(all_subnets_raw)
+    for subnet_group in all_subnets:
+        ALL_SUBNETS.append([_parse_subnet(s) for s in subnet_group])
+
+    if not RESTRICTED_SUBNETS:
+        _setup_restricted_subnets()
+    for subnet in RESTRICTED_SUBNETS:
+        ALL_SUBNETS.append([subnet])
 
 
-_setup_p2p_subnets()
+_setup_all_subnets()
 
 
 # regex pattern for CLIENT/wireless_ssid_ config. For example, global config
