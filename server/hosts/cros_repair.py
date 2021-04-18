@@ -9,9 +9,10 @@ from __future__ import print_function
 
 import json
 import logging
+import math
+import six
 import sys
 import time
-import math
 
 import common
 from autotest_lib.client.common_lib import error
@@ -777,7 +778,7 @@ class StopStartUIVerifier(hosts.Verifier):
     @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
     def verify(self, host):
         try:
-            host.run('stop ui && start ui', ignore_status=True, timeout=10)
+            host.run('stop ui && start ui', ignore_status=True, timeout=45)
         except error.AutoservSSHTimeout:
             raise hosts.AutoservVerifyError(
                 "Got timeout when stop ui/start ui. DUT might crash.")
