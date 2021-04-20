@@ -68,7 +68,6 @@ def message(*args):
 
 def main():
     if len(sys.argv) == 1:
-        reschedule_per_model()
         return
     hostname = sys.argv[1]
     message('START HOST: %s', hostname)
