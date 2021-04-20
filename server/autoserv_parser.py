@@ -237,6 +237,11 @@ class autoserv_parser(object):
                                  default='2',
                                  type=str,
                                  choices=['2', '3'])
+        self.parser.add_argument('--use_icmp',
+                                 action='store',
+                                 type=str,
+                                 default='true',
+                                 help='Allow ICMP utilities such as ping.')
 
         #
         # Warning! Please read before adding any new arguments!

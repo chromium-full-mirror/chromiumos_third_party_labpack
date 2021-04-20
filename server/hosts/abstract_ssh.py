@@ -118,7 +118,9 @@ class AbstractSSHHost(remote.RemoteHost):
         args_string = autoserv_parser.autoserv_parser.options.args
         args_dict = utils.args_to_dict(
                 args_string.split() if args_string is not None else '')
-        value = args_dict.get('use_icmp', 'true').lower()
+        value = args_dict.get(
+                'use_icmp',
+                autoserv_parser.autoserv_parser.options.use_icmp).lower()
         if value == 'true':
             self._use_icmp = True
         elif value == 'false':
