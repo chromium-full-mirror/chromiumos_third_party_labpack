@@ -979,7 +979,7 @@ class _ServoRebootRepair(repair_utils.RebootRepair):
     """Try repair servo by reboot servohost.
 
     This is the same as the standard `RebootRepair`, for servo_v3 it will
-    reboot the beaglebone board immidiately while for labstation it will
+    reboot the beaglebone board immediately while for labstation it will
     request a reboot by touch a flag file on its labstation, then
     labstation reboot will be handled by labstation AdminRepair task as
     labstation host multiple servos and need do an synchronized reboot.
@@ -1359,6 +1359,10 @@ def _servo_repair_actions():
             'servo_cr50_low_sbu', 'servo_cr50_off', 'servo_cr50_console',
             'servo_power_delivery'
     ]
+    reboot_triggers = [
+            'servo_topology', 'servo_root_present', 'servo_disk_space',
+            'servo_power_delivery'
+    ]
     return (
             (_ServoFwUpdateRepair, 'servo_fw_update', ['servo_ssh'],
              ['servo_fw']),
@@ -1368,7 +1372,8 @@ def _servo_repair_actions():
              ['servo_ssh', 'servo_topology'], ['servo_dut_connected']),
             (_RestartServod, 'servod_restart', ['servo_ssh'],
              config + base_triggers),
-            (_ServoRebootRepair, 'servo_reboot', ['servo_ssh'], base_triggers),
+            (_ServoRebootRepair, 'servo_reboot', ['servo_ssh'],
+             reboot_triggers),
             (_PowerDeliveryRepair, 'servo_pd_recover', ['servod_connection'],
              base_triggers),
             (_FakedisconnectRepair, 'servo_fakedisconnect',
