@@ -869,6 +869,58 @@ class ServoUSBDriveVerifier(hosts.Verifier):
         return 'Ensure USB drive on Servo is in good state.'
 
 
+class ServoWarmResetPingVerifier(hosts.Verifier):
+    """Verify that servo_micro has connected warm_reset pin on the DUT.
+
+    If cold_reset ping is working wine then and warm_reset has to be present
+    on the dut and working as expected.
+    For faft pools this condition is critical and if warm_reset is not present
+    then the issue with legacy header and DUT required re-work or replacement.
+    As lab is not doing re-work then we will make device for replacement.
+    """
+
+    @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
+    def verify(self, host):
+        # pylint: disable=missing-docstring
+        logging.debug('Started check warm_reset pin')
+        try:
+            val = host.servo.get('warm_reset')
+            logging.info('warm_reset=%s', val)
+            if val == 'on':
+                # If warm_reset has is on can be right signal
+                # or caused by missing connection between servo_micro and DUT.
+                # if we can switch it to the off then it was signal.
+                host.servo.set('warm_reset', 'off')
+        except error.TestFail:
+            logging.info('Detected issue with warm_reset pin on the DUT.')
+            host.set_device_needs_replacement()
+            raise hosts.AutoservVerifyError(
+                    'warm_reset pin is not detected. Set DUT for replacement')
+
+        except Exception as e:
+            logging.debug('(Not critical) %s', e)
+
+    def _is_applicable(self, host):
+        if not cros_firmware._is_firmware_testing_device(host):
+            logging.info('Skip check as device is not in faft pool.')
+            return False
+        if not host.servo:
+            logging.info('Skip check as servo is not initialized.')
+            return False
+        if 'servo_micro' not in host.servo.get_servo_type():
+            logging.info('Skip check as servo_micro is not part of setup.')
+            return False
+        if host.servo.get('cold_reset') != 'off':
+            logging.info('Skip check as cold_reset is not off.'
+                         ' That is another problem.')
+            return False
+        return True
+
+    @property
+    def description(self):
+        return 'Ensure warm_reset pin is detected on legacy header.'
+
+
 class DUTStorageVerifier(hosts.Verifier):
     """Verify that main storage on DUT is good to use.
 
@@ -1574,6 +1626,7 @@ def _cros_verify_base_dag():
     verify_dag = (
             (repair_utils.PingVerifier, 'ping', ()),
             (repair_utils.SshVerifier, 'ssh', ('ping', )),
+            (ServoWarmResetPingVerifier, 'servo_warm_reset', ()),
             (ServoUSBDriveVerifier, 'usb_drive', ()),
             (DevDefaultBootVerifier, 'dev_default_boot', ('ssh', )),
             (DevModeVerifier, 'devmode', ('ssh', )),
