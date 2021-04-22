@@ -291,7 +291,8 @@ class GeneralFirmwareRepair(FirmwareRepair):
             logging.info(
                     'The current servo state of %s is not met the'
                     ' minimum requirement to flash firmware.', host.hostname)
-        # Flash firmware via servo is consider an expansive opertation, so we
+            return False
+        # Flash firmware via servo is consider an expansive operation, so we
         # want to check repair data from previous repairs to determine if
         # firmware repair is need.
         dhp = host.health_profile
