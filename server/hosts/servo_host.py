@@ -138,6 +138,7 @@ class ServoHost(base_servohost.BaseServoHost):
         self._servo_state = None
         self.servo_port = None
         self.servo_board = None
+        self._ec_supported = None
         self.servo_model = None
         self.servo_serial = None
         self.servo_setup = None
@@ -522,12 +523,18 @@ class ServoHost(base_servohost.BaseServoHost):
     def is_ec_supported(self):
         """Check if ec is supported on the servo_board"""
         if self.servo_board:
+            if self._ec_supported is not None:
+                return self._ec_supported
             try:
                 frm_config = config.Config(self.servo_board, self.servo_model)
-                return frm_config.chrome_ec
+                self._ec_supported = getattr(frm_config, 'chrome_ec', False)
+                return self._ec_supported
             except Exception as e:
-                logging.error('Unexpected error when read from firmware'
-                    ' configs; %s', str(e))
+                logging.error(
+                        'Unexpected error when read from firmware'
+                        ' configs; %s', e)
+        else:
+            logging.debug('Cannot detect if DUT has EC as board unknown.')
         return False
 
     def validate_image_usbkey(self):
