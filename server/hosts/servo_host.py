@@ -1410,6 +1410,16 @@ class ServoHost(base_servohost.BaseServoHost):
         """
         return self._dut_health_profile
 
+    def print_all_servo_of_host(self):
+        """Print all servos detected on the host."""
+        try:
+            logging.info('\tDevices detected on the host:')
+            devices = self.get_topology().get_list_available_servos()
+            for device in devices:
+                logging.info('\t%s', device)
+        except Exception as e:
+            logging.debug('(Not critical) Fail list all servos: %s', e)
+
 
 def make_servo_hostname(dut_hostname):
     """Given a DUT's hostname, return the hostname of its servo.
@@ -1608,6 +1618,8 @@ def create_servo_host(dut,
     # Reset or reboot servo device only during AdminRepair tasks.
     if try_servo_repair:
         if newhost._is_locked:
+            # Print available servos on the host for debuging.
+            newhost.print_all_servo_of_host()
             # Reset servo if the servo is locked, as we check if the servohost
             # is up, if the servohost is labstation and if the servohost is in
             # lab inside the locking logic.

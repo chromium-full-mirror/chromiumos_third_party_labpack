@@ -51,8 +51,11 @@ class ServoTopology(object):
     # Command to get usb-path to device
     SERVOD_TOOL_USB_PATH = 'servodtool device -s %s usb-path'
 
+    # Base folder where all servo devices will be enumerated.
+    SERVOS_BASE_PATH = '/sys/bus/usb/devices'
+
     # Minimal length of usb-path for servo devices connected to the host.
-    MIN_SERVO_PATH = len('/sys/bus/usb/devices/X')
+    MIN_SERVO_PATH = len(SERVOS_BASE_PATH + '/X')
 
     def __init__(self, servo_host):
         self._host = servo_host
@@ -132,6 +135,7 @@ class ServoTopology(object):
         @params compare:     Validate against saved topology.
         """
         new_st = self._generate()
+        logging.debug("Generate topology: %s", new_st)
         if not new_st or not new_st.get(stc.ST_DEVICE_MAIN):
             message = 'Main device is not detected'
             return self._process_error(message, raise_error)
@@ -297,9 +301,9 @@ class ServoTopology(object):
             return []
         # Find the path to the servo-hub folder.
         hub_path = self._get_servo_hub_path(self._host.servo_serial)
+        logging.debug('Servo hub path: %s', hub_path)
         if not hub_path:
             return []
-        logging.debug('Servo hub path: %s', hub_path)
 
         # Find all serial filed of devices under servo-hub. Each device
         # has to have serial number.
@@ -327,6 +331,30 @@ class ServoTopology(object):
             return
         device._version = self._read_file(device.get_path(), 'configuration')
         logging.debug('New servo version: %s', device.get_version())
+
+    def get_list_available_servos(self):
+        """List all servos enumerated on the host."""
+        logging.debug('Started process to collect all devices on the host.')
+        devices = []
+        # Looking only devices with Google vendor-id (18d1).
+        cmd = 'grep -s  -R "18d1" %s/*/idVendor' % self.SERVOS_BASE_PATH
+        result_paths = self._read_multilines(cmd)
+        for path in result_paths:
+            idVendor_path = path.split(':')[0]
+            if not idVendor_path:
+                logging.debug('Cannot extract path to file from: %s', path)
+                continue
+            base_path = os.path.dirname(idVendor_path)
+            if not base_path:
+                logging.debug('Cannot extract base path from: %s',
+                              idVendor_path)
+                continue
+            device = self._get_device(base_path)
+            if not device:
+                logging.debug('Not found device under: %s', base_path)
+                continue
+            devices.append(device)
+        return devices
 
     def _get_vid_pid(self, path):
         """Read VID and PID of the device.
