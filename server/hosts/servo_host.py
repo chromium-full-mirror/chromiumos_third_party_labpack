@@ -1293,7 +1293,8 @@ class ServoHost(base_servohost.BaseServoHost):
         servo_v3_present = self.get_verifier_state('servo_v3_root_present')
         servo_fw = self.get_verifier_state('servo_fw')
         disk_space = self.get_verifier_state('servo_disk_space')
-        start_servod = self.get_verifier_state('servod_started')
+        start_servod = self.get_verifier_state('start_servod')
+        servod_started = self.get_verifier_state('servod_started')
         create_servo = self.get_verifier_state('servod_connection')
         init_servo = self.get_verifier_state('servod_control')
         cr50_low_sbu = self.get_verifier_state('servo_cr50_low_sbu')
@@ -1309,6 +1310,8 @@ class ServoHost(base_servohost.BaseServoHost):
 
         if not ssh:
             return servo_constants.SERVO_STATE_NO_SSH
+        if start_servod == hosts.VERIFY_FAILED:
+            return servo_constants.SERVO_STATE_SERVO_HOST_ISSUE
         if servo_root_present == hosts.VERIFY_FAILED:
             if not self.servo_serial:
                 return servo_constants.SERVO_STATE_WRONG_CONFIG
@@ -1340,7 +1343,7 @@ class ServoHost(base_servohost.BaseServoHost):
                         'chromeos/autotest/repair/servo_unexpected/pwr_button2'
                 ).increment(fields=self._get_host_metrics_data())
 
-        if start_servod == hosts.VERIFY_FAILED:
+        if servod_started == hosts.VERIFY_FAILED:
             return servo_constants.SERVO_STATE_SERVOD_ISSUE
 
         # one of the reason why servo can not initialized

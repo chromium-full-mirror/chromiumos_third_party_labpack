@@ -68,9 +68,9 @@ SERVO_REPAIR_ACTIONS = (
         (servo_repair._ServoMicroFlashRepair, 'servo_micro_flash',
          ['servo_ssh', 'servo_topology'], ['servo_dut_connected']),
         (servo_repair._RestartServod, 'servod_restart', ['servo_ssh'], [
-                'servo_config_board', 'servo_config_serial', 'servod_started',
-                'servo_topology', 'servod_connection', 'servod_control',
-                'servo_dut_connected', 'servo_hub_connected',
+                'servo_config_board', 'servo_config_serial', 'start_servod',
+                'servod_started', 'servo_topology', 'servod_connection',
+                'servod_control', 'servo_dut_connected', 'servo_hub_connected',
                 'servo_pwr_button', 'servo_cr50_console', 'servo_cr50_low_sbu',
                 'servo_cr50_off', 'servo_power_delivery'
         ]),

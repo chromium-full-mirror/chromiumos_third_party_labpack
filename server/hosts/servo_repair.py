@@ -113,13 +113,7 @@ class _StartServodVerifier(hosts.Verifier):
     def verify(self, host):
         if not hasattr(self, 'started'):
             logging.info('Starting servod!')
-            try:
-                host.restart_servod(quick_startup=True)
-            except Exception as e:
-                logging.warning(
-                        "Start servod failed due to:\n%s\n"
-                        "This error is forgiven here, we will retry"
-                        " in further repair actions.", e)
+            host.restart_servod(quick_startup=True)
         # caching the value to prevent restart service when trigger verifier.
         self.started = True
 
@@ -1346,7 +1340,7 @@ def _servo_repair_actions():
     """
     Return a `RepairStrategy` for a `ServoHost`.
     """
-    config = ['servo_config_board', 'servo_config_serial']
+    config = ['servo_config_board', 'servo_config_serial', 'start_servod']
     base_triggers = [
             'servod_started', 'servo_topology', 'servod_connection',
             'servod_control', 'servo_dut_connected', 'servo_hub_connected',
