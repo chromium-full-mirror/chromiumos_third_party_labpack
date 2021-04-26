@@ -287,7 +287,48 @@ class ServoTopology(object):
         if not servo_path or len(servo_path) < self.MIN_SERVO_PATH:
             logging.info('Servo not detected.')
             return None
-        return self._get_device(servo_path)
+        device = self._get_device(servo_path)
+        if device and device.is_good():
+            return device
+        return None
+
+    def get_root_servo_from_cache(self):
+        """Get root servo device based on topology cache data.
+
+        First we try to find servo based on topology info.
+
+        @returns: ConnectedServo if device found.
+        """
+        logging.info('Trying to find root device from topology cache!')
+        if (not self._topology or not self._topology.get(stc.ST_DEVICE_MAIN)):
+            logging.info('Topology cache is empty or not present')
+            return None
+        devpath = self._topology.get(
+                stc.ST_DEVICE_MAIN)[stc.ST_DEVICE_HUB_PORT]
+        logging.debug('devpath=%s', devpath)
+        if not devpath:
+            return None
+        # devpath represent sequence of ports used to detect device
+        device_fs_port = '1-%s' % devpath
+        logging.debug('device_fs_port=%s', device_fs_port)
+        device_path = os.path.join(self.SERVOS_BASE_PATH, device_fs_port)
+        device = self._get_device(device_path)
+        logging.info('device=%s', device)
+        if device and device.is_good():
+            return device
+        logging.debug('Trying to verify present of the hub!')
+        hub_folder = string.join(device_fs_port.split('.')[:-1], '.')
+        logging.debug('servo_hub_folder=%s', hub_folder)
+        hub_product = os.path.join(self.SERVOS_BASE_PATH, hub_folder,
+                                   'product')
+        logging.debug('hub_product=%s', hub_product)
+        hub_name = self._read_line('cat %s' % hub_product)
+        logging.debug('hub_name=%s', hub_name)
+        if hub_name:
+            raise ServoTopologyError(
+                    'Root servo hardware potentially missing!')
+        raise ServoTopologyError(
+                'No USB device on expected port for the servo!')
 
     def get_list_of_devices(self):
         """Generate list of devices with serials.

@@ -128,18 +128,29 @@ class _RootServoPresentVerifier(hosts.Verifier):
     @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
     def verify(self, host):
         device = None
+        topology = host.get_topology()
+        topology.read(host.get_dut_host_info())
         try:
-            topology = host.get_topology()
             device = topology.get_root_servo()
-        except:
+        except Exception as e:
             host.request_reboot()
             logging.info('Reboot labstation requested, it will be handled'
                          ' by labstation AdminRepair task.'
                          ' Unable to detect root servo info from topology.')
-        if device and device.is_good():
-            logging.debug('Root servo is present')
-        else:
-            raise hosts.AutoservVerifyError('Root servo not found!')
+            logging.debug('(Not critical) %s', e)
+        if device:
+            logging.info('Root servo is present')
+            return
+        device = topology.get_root_servo_from_cache()
+        if device:
+            logging.debug('Found device: %s', device)
+            if device.get_serial_number() != host.servo_serial:
+                self.serial_mismatch = True
+                raise hosts.AutoservVerifyError('Serial mismatch detected')
+            logging.info('Root servo is present')
+            return
+        # Leaving error in case we got empty device.
+        raise hosts.AutoservVerifyError('Root servo not found!')
 
     def _is_applicable(self, host):
         # Run only for servos under labstations.

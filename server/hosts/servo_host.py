@@ -1281,6 +1281,13 @@ class ServoHost(base_servohost.BaseServoHost):
         """
         return self._repair_strategy.verifier_is_good(tag)
 
+    def get_repair_strategy_node(self, tag):
+        """Return the instance of verifier/repair node for host by tag.
+
+        @returns: _DependencyNode or None
+        """
+        return self._repair_strategy.node_by_tag(tag)
+
     def determine_servo_state(self):
         """Determine servo state based on the failed verifier.
 
@@ -1290,6 +1297,8 @@ class ServoHost(base_servohost.BaseServoHost):
         """
         ssh = self.get_verifier_state('servo_ssh')
         servo_root_present = self.get_verifier_state('servo_root_present')
+        servo_root_present_node = self.get_repair_strategy_node(
+                'servo_root_present')
         servo_v3_present = self.get_verifier_state('servo_v3_root_present')
         servo_fw = self.get_verifier_state('servo_fw')
         disk_space = self.get_verifier_state('servo_disk_space')
@@ -1316,6 +1325,8 @@ class ServoHost(base_servohost.BaseServoHost):
         if servo_root_present == hosts.VERIFY_FAILED:
             if not self.servo_serial:
                 return servo_constants.SERVO_STATE_WRONG_CONFIG
+            if hasattr(servo_root_present_node, 'serial_mismatch'):
+                return servo_constants.SERVO_STATE_SERIAL_MISMATCH
             return servo_constants.SERVO_STATE_NOT_CONNECTED
         if servo_v3_present == hosts.VERIFY_FAILED:
             # if we cannot find required board on servo_v3
