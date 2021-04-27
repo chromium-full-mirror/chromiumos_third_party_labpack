@@ -86,7 +86,7 @@ readonly _FW_TYPES="ro rw"
 flash_rw_firmware() {
   local fw_file="${1}"
   check_file_exists "${fw_file}"
-  flashrom --fast-verify -V -p ec:type=fp -i EC_RW -w "${fw_file}"
+  flashrom --noverify-all -V -p ec:type=fp -i EC_RW -w "${fw_file}"
 }
 
 get_ectool_output_val() {

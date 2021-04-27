@@ -97,7 +97,7 @@ class power_DeferForFlashrom(test.test):
         # Start flashrom in the background and wait for it to create its lock
         # file.
         self.run_in_background(
-            ('flashrom -w %s --diff %s --noverify '
+            ('flashrom -w %s --flash-contents %s --noverify '
              '-p dummy:freq=%d,emulate=VARIABLE_SIZE,size=%d,'
              'erase_to_zero=yes') %
             (rand_file, zero_file, frequency_hz, BLOCK_SIZE))
