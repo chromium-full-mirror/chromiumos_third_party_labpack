@@ -377,6 +377,42 @@ class _ServodJobVerifier(hosts.Verifier):
         return 'servod upstart job is running'
 
 
+class _ServodEchoVerifier(hosts.Verifier):
+    """
+    Verifier to check that the `servod` upstart job is responsible.
+    """
+
+    SERVOD_INITIALIZED = 'servodtool instance show -p %d'
+    SERVOD_RESPONSIVE = 'dut-control -p %d serialname'
+
+    @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
+    def verify(self, host):
+        self._verify_servod_initialized(host)
+        self._verify_servod_responsive(host)
+
+    def _verify_servod_initialized(self, host):
+        # Verify that servod initialized.
+        cmd = self.SERVOD_INITIALIZED % host.servo_port
+        res = host.run(cmd, ignore_status=True, timeout=120)
+        if res.exit_status != 0:
+            raise hosts.AutoservVerifyError(
+                    'Servod instance is not initialized')
+        logging.debug("Presented instance: %s", res.stdout.strip())
+
+    def _verify_servod_responsive(self, host):
+        # Verify if servod started and process is responsible.
+        cmd = self.SERVOD_RESPONSIVE % host.servo_port
+        res = host.run(cmd, ignore_status=True, timeout=120)
+        if res.exit_status != 0:
+            raise hosts.AutoservVerifyError(
+                    'Servod is not responsive for dut-control commands')
+        logging.info('Servod responsive: %s', res.stdout)
+
+    @property
+    def description(self):
+        return 'Servod is running and responsive to dut-control run.'
+
+
 class _DiskSpaceVerifier(hosts.Verifier):
     """
     Verifier to make sure there is enough disk space left on servohost.
@@ -1313,9 +1349,9 @@ def _servo_verifier_actions():
                     'servo_config_board', 'servo_config_serial',
                     'servo_disk_space'
             ]),
-            (_TopologyVerifier, 'servo_topology', ['servod_started']),
-            (_ServodConnectionVerifier, 'servod_connection',
-             ['servod_started']),
+            (_ServodEchoVerifier, 'servod_echo', ['servod_started']),
+            (_TopologyVerifier, 'servo_topology', ['servod_echo']),
+            (_ServodConnectionVerifier, 'servod_connection', ['servod_echo']),
             (_Cr50LowSBUVerifier, 'servo_cr50_low_sbu', ['servod_connection']),
             (_Cr50OffVerifier, 'servo_cr50_off', ['servod_connection']),
             (_ServodControlVerifier, 'servod_control', ['servod_connection']),
@@ -1343,9 +1379,9 @@ def _servo_repair_actions():
     config = ['servo_config_board', 'servo_config_serial', 'start_servod']
     base_triggers = [
             'servod_started', 'servo_topology', 'servod_connection',
-            'servod_control', 'servo_dut_connected', 'servo_hub_connected',
-            'servo_pwr_button', 'servo_cr50_console', 'servo_cr50_low_sbu',
-            'servo_cr50_off', 'servo_power_delivery'
+            'servod_echo', 'servod_control', 'servo_dut_connected',
+            'servo_hub_connected', 'servo_pwr_button', 'servo_cr50_console',
+            'servo_cr50_low_sbu', 'servo_cr50_off', 'servo_power_delivery'
     ]
     dut_triggers = [
             'servod_control', 'servo_lid_open', 'servo_ec_board',

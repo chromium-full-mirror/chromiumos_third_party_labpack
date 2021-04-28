@@ -32,9 +32,10 @@ SERVO_VERIFY_DAG = (
                 'start_servod', 'servo_v3_root_present', 'servo_config_board',
                 'servo_config_serial', 'servo_disk_space'
         ]),
-        (servo_repair._TopologyVerifier, 'servo_topology', ['servod_started']),
+        (servo_repair._ServodEchoVerifier, 'servod_echo', ['servod_started']),
+        (servo_repair._TopologyVerifier, 'servo_topology', ['servod_echo']),
         (servo_repair._ServodConnectionVerifier, 'servod_connection',
-         ['servod_started']),
+         ['servod_echo']),
         (servo_repair._Cr50LowSBUVerifier, 'servo_cr50_low_sbu',
          ['servod_connection']),
         (servo_repair._Cr50OffVerifier, 'servo_cr50_off',
@@ -70,9 +71,10 @@ SERVO_REPAIR_ACTIONS = (
         (servo_repair._RestartServod, 'servod_restart', ['servo_ssh'], [
                 'servo_config_board', 'servo_config_serial', 'start_servod',
                 'servod_started', 'servo_topology', 'servod_connection',
-                'servod_control', 'servo_dut_connected', 'servo_hub_connected',
-                'servo_pwr_button', 'servo_cr50_console', 'servo_cr50_low_sbu',
-                'servo_cr50_off', 'servo_power_delivery'
+                'servod_echo', 'servod_control', 'servo_dut_connected',
+                'servo_hub_connected', 'servo_pwr_button',
+                'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
+                'servo_power_delivery'
         ]),
         (servo_repair._ServoRebootRepair, 'servo_reboot', ['servo_ssh'], [
                 'servo_topology', 'servo_root_present', 'servo_disk_space',
@@ -81,7 +83,7 @@ SERVO_REPAIR_ACTIONS = (
         (servo_repair._PowerDeliveryRepair, 'servo_pd_recover',
          ['servod_connection'], [
                  'servod_started', 'servo_topology', 'servod_connection',
-                 'servod_control', 'servo_dut_connected',
+                 'servod_echo', 'servod_control', 'servo_dut_connected',
                  'servo_hub_connected', 'servo_pwr_button',
                  'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
                  'servo_power_delivery'
@@ -89,16 +91,17 @@ SERVO_REPAIR_ACTIONS = (
         (servo_repair._FakedisconnectRepair, 'servo_fakedisconnect',
          ['servod_connection'], [
                  'servod_started', 'servo_topology', 'servod_connection',
-                 'servod_control', 'servo_dut_connected',
+                 'servod_echo', 'servod_control', 'servo_dut_connected',
                  'servo_hub_connected', 'servo_pwr_button',
                  'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
                  'servo_power_delivery'
          ]),
         (servo_repair._ToggleCCLineRepair, 'servo_cc', ['servod_connection'], [
                 'servod_started', 'servo_topology', 'servod_connection',
-                'servod_control', 'servo_dut_connected', 'servo_hub_connected',
-                'servo_pwr_button', 'servo_cr50_console', 'servo_cr50_low_sbu',
-                'servo_cr50_off', 'servo_power_delivery'
+                'servod_echo', 'servod_control', 'servo_dut_connected',
+                'servo_hub_connected', 'servo_pwr_button',
+                'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
+                'servo_power_delivery'
         ]),
         (servo_repair._DutRebootRepair, 'servo_dut_reboot',
          ['servod_connection'], [
