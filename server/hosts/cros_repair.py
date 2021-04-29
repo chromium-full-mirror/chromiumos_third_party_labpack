@@ -869,7 +869,7 @@ class ServoUSBDriveVerifier(hosts.Verifier):
         return 'Ensure USB drive on Servo is in good state.'
 
 
-class ServoWarmResetPingVerifier(hosts.Verifier):
+class ServoWarmResetPinVerifier(hosts.Verifier):
     """Verify that servo_micro has connected warm_reset pin on the DUT.
 
     If cold_reset ping is working wine then and warm_reset has to be present
@@ -1626,7 +1626,7 @@ def _cros_verify_base_dag():
     verify_dag = (
             (repair_utils.PingVerifier, 'ping', ()),
             (repair_utils.SshVerifier, 'ssh', ('ping', )),
-            (ServoWarmResetPingVerifier, 'servo_warm_reset', ()),
+            (ServoWarmResetPinVerifier, 'servo_warm_reset', ()),
             (ServoUSBDriveVerifier, 'usb_drive', ()),
             (DevDefaultBootVerifier, 'dev_default_boot', ('ssh', )),
             (DevModeVerifier, 'devmode', ('ssh', )),
