@@ -334,7 +334,7 @@ class flashrom_util(object):
         @param enabled: If True, run --wp-enable; if False, run --wp-disable.
                         If None (default), don't specify either one.
         """
-        cmd = 'flashrom %s --verbose --wp-range %s %s' % (
+        cmd = 'flashrom %s --verbose --wp-range %s,%s' % (
                 self._target_command, start, length)
         if enabled is not None:
             cmd += ' '
