@@ -566,7 +566,7 @@ class _CCDPowerDeliveryVerifier(hosts.Verifier):
     """
     @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
     def verify(self, host):
-        if host.get_servo().get('servo_v4_role') == 'snk':
+        if host.get_servo().get('servo_pd_role') == 'snk':
             raise hosts.AutoservNonCriticalVerifyError(
                     'Power delivery not in src role.')
 
@@ -755,14 +755,14 @@ class _BaseCr50SBUVerifier(_BaseDUTConnectionVerifier):
     def _get_max_sbu_value(self, host):
         """Get average voltage on SBU lines."""
         servo = host.get_servo()
-        if not servo.has_control('servo_v4_sbu1_mv'):
+        if not servo.has_control('servo_dut_sbu1_mv'):
             return -1
         s1 = 0
         s2 = 0
         for i in range(self._TOTAL_CHECK_SBU_VOLTAGE):
             try:
-                sbu1 = int(servo.get('servo_v4_sbu1_mv'))
-                sbu2 = int(servo.get('servo_v4_sbu2_mv'))
+                sbu1 = int(servo.get('servo_dut_sbu1_mv'))
+                sbu2 = int(servo.get('servo_dut_sbu2_mv'))
                 logging.debug('Attempt:%2d, sbu1 %4d sbu2 %4d', i, sbu1, sbu2)
                 s1 += sbu1
                 s2 += sbu2
@@ -1069,8 +1069,8 @@ class _ToggleCCLineRepair(hosts.RepairAction):
 
         logging.info('Turn on configuration channel and wait 30 seconds.')
         # alternative option to turn line on is by `cc srcdts`
-        host.get_servo().set_nocheck('servo_v4_role', 'src')
-        host.get_servo().set_nocheck('servo_v4_dts_mode', 'on')
+        host.get_servo().set_nocheck('servo_pd_role', 'src')
+        host.get_servo().set_nocheck('servo_dts_mode', 'on')
         # wait till command will be effected
         time.sleep(self.CC_ON_TIMEOUT)
         host.restart_servod()
@@ -1161,21 +1161,21 @@ class _PowerDeliveryRepair(hosts.RepairAction):
 
     @timeout_util.TimeoutDecorator(cros_constants.REPAIR_TIMEOUT_SEC)
     def repair(self, host):
-        host.get_servo().set_nocheck('servo_v4_role', 'snk')
+        host.get_servo().set_nocheck('servo_pd_role', 'snk')
         time.sleep(1)
         for x in range(self._SET_ATTEMPT_COUNT):
             logging.debug('Try set servo_v4_role to src.'
                           ' Attempt: %s', x + 1)
             try:
-                host.get_servo().set('servo_v4_role', 'src')
+                host.get_servo().set('servo_pd_role', 'src')
                 # Waiting a few seconds as it can be change to snk if PD
                 # on servo has issue.
                 time.sleep(5)
             except BaseException as e:
                 logging.debug('Setting PD with retries failed %s', e)
-            if host.get_servo().get('servo_v4_role') == 'src':
+            if host.get_servo().get('servo_pd_role') == 'src':
                 break
-        if host.get_servo().get('servo_v4_role') == 'snk':
+        if host.get_servo().get('servo_pd_role') == 'snk':
             raise hosts.AutoservNonCriticalVerifyError(
                     'Cannot switch power delivery to the src role')
         # Restart servod to re-initialize servos.

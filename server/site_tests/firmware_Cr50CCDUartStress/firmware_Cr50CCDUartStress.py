@@ -56,10 +56,10 @@ class firmware_Cr50CCDUartStress(Cr50Test):
         logging.info('CCD opened.')
 
         # Change active device as ccd_cr50.
-        if self.servo.has_control('active_v4_device'):
+        if self.servo.has_control('active_dut_controller'):
             try:
                 self.active_dev = 'ccd_cr50'
-                self.servo.set('active_v4_device', self.active_dev)
+                self.servo.set('active_dut_controller', self.active_dev)
             except error.TestFail as e:
                 raise error.TestNAError('cannot change active_v4_device: %s' %
                                         str(e))

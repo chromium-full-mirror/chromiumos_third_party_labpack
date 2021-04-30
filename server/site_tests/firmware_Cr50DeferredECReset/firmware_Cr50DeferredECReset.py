@@ -44,7 +44,7 @@ class firmware_Cr50DeferredECReset(Cr50Test):
         else:
             # Stop power delivery to dut
             logging.info('Stop charging')
-            self.servo.set('servo_v4_role', 'snk')
+            self.servo.set('servo_pd_role', 'snk')
 
             # Battery Cutoff
             logging.info('Cut battery off')
@@ -54,7 +54,7 @@ class firmware_Cr50DeferredECReset(Cr50Test):
 
             # Enable power delivery to dut
             logging.info('Start charging')
-            self.servo.set('servo_v4_role', 'src')
+            self.servo.set('servo_pd_role', 'src')
 
         time.sleep(self.PD_SETTLE_TIME)
 
@@ -111,14 +111,14 @@ class firmware_Cr50DeferredECReset(Cr50Test):
             self.HAS_CR50_RESET_ODL = False
 
             # Test the external power delivery
-            self.servo.set('servo_v4_role', 'snk')
+            self.servo.set('servo_pd_role', 'snk')
             time.sleep(self.PD_SETTLE_TIME)
 
             if self.ac_is_plugged_in():
                 raise error.TestFail('Failed to set servo_v4_role sink')
 
             # Test stopping the external power delivery
-            self.servo.set('servo_v4_role', 'src')
+            self.servo.set('servo_pd_role', 'src')
             time.sleep(self.PD_SETTLE_TIME)
 
             if not self.ac_is_plugged_in():
@@ -246,7 +246,7 @@ class firmware_Cr50DeferredECReset(Cr50Test):
             if self.HAS_CR50_RESET_ODL:
                 self.servo.set_nocheck('cr50_reset_odl', 'off')
             else:
-                self.servo.set_nocheck('servo_v4_role', 'src')
+                self.servo.set_nocheck('servo_pd_role', 'src')
 
             self.servo.set_dts_mode(self.dts_restore)
             time.sleep(1)

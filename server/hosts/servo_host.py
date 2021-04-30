@@ -967,7 +967,7 @@ class ServoHost(base_servohost.BaseServoHost):
         # panic information from servo micro and servo v4 for the current logs.
         # This can only happen if the |_servo| attribute is initialized.
         if self._servo:
-            for mcu in ['servo_micro', 'servo_v4']:
+            for mcu in ['servo_micro', 'servo_v4', 'servo_v4p1']:
                 ctrl = '%s_uart_cmd' % mcu
                 if self._servo.has_control(ctrl):
                     logging.info('Trying to retrieve %r panicinfo into logs',

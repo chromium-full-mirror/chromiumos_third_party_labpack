@@ -108,7 +108,7 @@ class firmware_Cr50CheckCap(Cr50Test):
                 self.servo.has_control('ec_board', self._ec_prefix))
         if self.check_ec_uart and self._ec_prefix:
             try:
-                self.servo.set('active_v4_device', self._ec_prefix)
+                self.servo.set('active_dut_controller', self._ec_prefix)
             except:
                 self.check_ec_uart = False
 

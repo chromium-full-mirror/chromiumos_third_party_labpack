@@ -129,9 +129,9 @@ class firmware_Cr50CCDFirmwareUpdate(Cr50Test):
 
         # Fast open cr50 and check if testlab is enabled.
         self.fast_ccd_open(enable_testlab=True)
-        if self.servo.has_control('active_v4_device'):
+        if self.servo.has_control('active_dut_controller'):
             try:
-                self.servo.set('active_v4_device', 'ccd_cr50')
+                self.servo.set('active_dut_controller', 'ccd_cr50')
             except error.TestFail as e:
                 raise error.TestNAError('cannot change active_v4_device: %s' %
                                         str(e))

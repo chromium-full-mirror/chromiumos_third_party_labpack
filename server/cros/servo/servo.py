@@ -656,14 +656,14 @@ class Servo(object):
         # v4p1).
         # TODO(coconutruben): eventually, replace this with a metric to track
         # SBU voltages wrt servo-hw/dut-hw
-        if self.has_control('servo_v4_sbu1_mv'):
+        if self.has_control('servo_dut_sbu1_mv'):
             # Attempt to take a reading of sbu1 and sbu2 multiple times to
             # account for situations where the two lines exchange hi/lo roles
             # frequently.
             for i in range(10):
                 try:
-                    sbu1 = int(self.get('servo_v4_sbu1_mv'))
-                    sbu2 = int(self.get('servo_v4_sbu2_mv'))
+                    sbu1 = int(self.get('servo_dut_sbu1_mv'))
+                    sbu2 = int(self.get('servo_dut_sbu2_mv'))
                     logging.info('attempt %d sbu1 %d sbu2 %d', i, sbu1, sbu2)
                 except error.TestFail as e:
                     # This is a nice to have but if reading this fails, it
@@ -1004,10 +1004,10 @@ class Servo(object):
 
     def get_ec_board(self):
         """Get the board name from EC."""
-        if self.has_control('active_v4_device'):
+        if self.has_control('active_dut_controller'):
             # If servo v4 is allowing dual_v4 devices, then choose the
             # active device.
-            active_device = self.get('active_v4_device')
+            active_device = self.get('active_dut_controller')
             if active_device == self.get_main_servo_device():
                 active_device = ''
         else:
@@ -1314,7 +1314,7 @@ class Servo(object):
 
         # If servo v4 is using ccd and servo micro, modify the servo type to
         # reflect the active device.
-        active_device = self.get('active_v4_device')
+        active_device = self.get('active_dut_controller')
         if active_device in servo_type:
             logging.info('%s is active', active_device)
             return 'servo_v4_with_' + active_device
@@ -1333,7 +1333,7 @@ class Servo(object):
         """Return the servo_v4_type (such as 'type-c'), or None if not v4."""
         if not hasattr(self, '_servo_v4_type'):
             if 'servo_v4' in self.get_servo_type():
-                self._servo_v4_type = self.get('servo_v4_type')
+                self._servo_v4_type = self.get('root.dut_connection_type')
             else:
                 self._servo_v4_type = None
         return self._servo_v4_type
@@ -1353,9 +1353,9 @@ class Servo(object):
 
     def enable_main_servo_device(self):
         """Make sure the main device has control of the dut."""
-        if not self.has_control('active_v4_device'):
+        if not self.has_control('active_dut_controller'):
             return
-        self.set('active_v4_device', self.get_main_servo_device())
+        self.set('active_dut_controller', self.get_main_servo_device())
 
 
     def main_device_is_ccd(self):
@@ -1385,7 +1385,7 @@ class Servo(object):
             # Use dts support as a proxy to whether the servo setup could
             # support a dual role. Only those setups now support legacy and ccd.
             return True
-        active_device = self.get('active_v4_device')
+        active_device = self.get('active_dut_controller')
         return 'ccd_cr50' not in active_device
 
     def _initialize_programmer(self, rw_only=False):
@@ -1616,15 +1616,15 @@ class Servo(object):
             logging.debug('Not a servo v4, unable to set role to %s.', role)
             return
 
-        if not self.has_control('servo_v4_role'):
+        if not self.has_control('servo_pd_role'):
             logging.debug(
                     'Servo does not has servo_v4_role control, unable'
                     ' to set role to %s.', role)
             return
 
-        value = self.get('servo_v4_role')
+        value = self.get('servo_pd_role')
         if value != role:
-            self.set_nocheck('servo_v4_role', role)
+            self.set_nocheck('servo_pd_role', role)
         else:
             logging.debug('Already in the role: %s.', role)
 
@@ -1637,13 +1637,13 @@ class Servo(object):
             logging.debug('Not a servo v4, unable to get role')
             return None
 
-        if not self.has_control('servo_v4_role'):
+        if not self.has_control('servo_pd_role'):
             logging.debug(
                     'Servo does not has servo_v4_role control, unable'
                     ' to get the role.')
             return None
 
-        return self.get('servo_v4_role')
+        return self.get('servo_pd_role')
 
     def set_servo_v4_pd_comm(self, en):
         """Set the PD communication of servo v4, either 'on' or 'off'.
@@ -1695,7 +1695,7 @@ class Servo(object):
         if not self.dts_mode_is_valid():
             logging.info('Not a valid servo setup. Unable to get dts mode.')
             return
-        return self.get('servo_v4_dts_mode')
+        return self.get('servo_dts_mode')
 
     def ccd_watchdog_enable(self, enable):
         """Control the ccd watchdog."""
@@ -1737,7 +1737,7 @@ class Servo(object):
         if not enable_watchdog:
             self.ccd_watchdog_enable(False)
 
-        self.set_nocheck('servo_v4_dts_mode', state)
+        self.set_nocheck('servo_dts_mode', state)
 
         if enable_watchdog:
             self.ccd_watchdog_enable(True)
@@ -1777,10 +1777,16 @@ class Servo(object):
             return '%s_version.%s' % (dev, tag)
 
         fw_versions = {}
+        # Note, this works because v4p1 starts with v4 as well.
+        # TODO(coconutruben): make this more robust so that it can work on
+        # a future v-whatever as well.
         if 'servo_v4' not in self.get_servo_type():
             return {}
-        v4_tag = get_fw_version_tag('support', 'servo_v4')
-        fw_versions[v4_tag] = self._get_servo_type_fw_version('servo_v4')
+        # v4 or v4p1
+        v4_flavor = self.get_servo_type().split('_with_')[0]
+        v4_tag = get_fw_version_tag('root', v4_flavor)
+        fw_versions[v4_tag] = self._get_servo_type_fw_version('servo_fw',
+                                                              prefix='root')
         if 'with' in self.get_servo_type():
             dut_devs = self.get_servo_type().split('_with_')[1].split('_and_')
             main_tag = get_fw_version_tag('main', dut_devs[0])
