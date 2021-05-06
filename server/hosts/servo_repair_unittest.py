@@ -29,8 +29,8 @@ SERVO_VERIFY_DAG = (
         (servo_repair._SerialConfigVerifier, 'servo_config_serial',
          ['servo_ssh']),
         (servo_repair._ServodJobVerifier, 'servod_started', [
-                'start_servod', 'servo_v3_root_present', 'servo_config_board',
-                'servo_config_serial', 'servo_disk_space'
+                'start_servod', 'servo_config_board', 'servo_config_serial',
+                'servo_disk_space'
         ]),
         (servo_repair._ServodEchoVerifier, 'servod_echo', ['servod_started']),
         (servo_repair._TopologyVerifier, 'servo_topology', ['servod_echo']),
@@ -68,14 +68,15 @@ SERVO_REPAIR_ACTIONS = (
          ['servo_disk_space']),
         (servo_repair._ServoMicroFlashRepair, 'servo_micro_flash',
          ['servo_ssh', 'servo_topology'], ['servo_dut_connected']),
-        (servo_repair._RestartServod, 'servod_restart', ['servo_ssh'], [
-                'servo_config_board', 'servo_config_serial', 'start_servod',
-                'servod_started', 'servo_topology', 'servod_connection',
-                'servod_echo', 'servod_control', 'servo_dut_connected',
-                'servo_hub_connected', 'servo_pwr_button',
-                'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
-                'servo_power_delivery'
-        ]),
+        (servo_repair._RestartServod, 'servod_restart',
+         ['servo_ssh', 'servo_fw'], [
+                 'servo_config_board', 'servo_config_serial', 'start_servod',
+                 'servod_started', 'servo_topology', 'servod_connection',
+                 'servod_echo', 'servod_control', 'servo_dut_connected',
+                 'servo_hub_connected', 'servo_pwr_button',
+                 'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
+                 'servo_power_delivery'
+         ]),
         (servo_repair._ServoRebootRepair, 'servo_reboot', ['servo_ssh'], [
                 'servo_topology', 'servo_root_present', 'servo_disk_space',
                 'servo_power_delivery'

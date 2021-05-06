@@ -204,7 +204,7 @@ class _ServoFwVerifier(hosts.Verifier):
     def verify(self, host):
         try:
             if servo_updater.any_servo_needs_firmware_update(host):
-                raise hosts.AutoservNonCriticalVerifyError(
+                raise hosts.AutoservVerifyError(
                         'Some servo requires firmware update')
         except servo_updater.ServoFwVersionMissedError as e:
             # Do not fail as it will trigger re-flash fw on the servo
@@ -1356,9 +1356,8 @@ def _servo_verifier_actions():
             (_BoardConfigVerifier, 'servo_config_board', ['servo_ssh']),
             (_SerialConfigVerifier, 'servo_config_serial', ['servo_ssh']),
             (_ServodJobVerifier, 'servod_started', [
-                    'start_servod', 'servo_v3_root_present',
-                    'servo_config_board', 'servo_config_serial',
-                    'servo_disk_space'
+                    'start_servod', 'servo_config_board',
+                    'servo_config_serial', 'servo_disk_space'
             ]),
             (_ServodEchoVerifier, 'servod_echo', ['servod_started']),
             (_TopologyVerifier, 'servo_topology', ['servod_echo']),
@@ -1411,7 +1410,7 @@ def _servo_repair_actions():
              ['servo_disk_space']),
             (_ServoMicroFlashRepair, 'servo_micro_flash',
              ['servo_ssh', 'servo_topology'], ['servo_dut_connected']),
-            (_RestartServod, 'servod_restart', ['servo_ssh'],
+            (_RestartServod, 'servod_restart', ['servo_ssh', 'servo_fw'],
              config + base_triggers),
             (_ServoRebootRepair, 'servo_reboot', ['servo_ssh'],
              reboot_triggers),
