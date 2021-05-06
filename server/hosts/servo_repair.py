@@ -1271,10 +1271,15 @@ class _ServoFwUpdateRepair(hosts.RepairAction):
 
     @timeout_util.TimeoutDecorator(cros_constants.REPAIR_TIMEOUT_SEC)
     def repair(self, host):
-        servo_updater.update_servo_firmware(host,
-                                            try_attempt_count=3,
-                                            force_update=False,
-                                            try_force_update=True)
+        try:
+            servo_updater.update_servo_firmware(host,
+                                                try_attempt_count=3,
+                                                force_update=False,
+                                                try_force_update=True)
+        except servo_updater.ServoUpdaterError as er:
+            # Catch servo_updater issue to cache it.
+            self.servo_updater_issue_detected = True
+            raise hosts.AutoservVerifyError('ServoUpdater issue detected')
 
     def _is_applicable(self, host):
         # Run only for servo_v4 and servo_v4p1.

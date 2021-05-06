@@ -1301,6 +1301,7 @@ class ServoHost(base_servohost.BaseServoHost):
                 'servo_root_present')
         servo_v3_present = self.get_verifier_state('servo_v3_root_present')
         servo_fw = self.get_verifier_state('servo_fw')
+        servo_fw_update = self.get_repair_strategy_node('servo_fw_update')
         disk_space = self.get_verifier_state('servo_disk_space')
         start_servod = self.get_verifier_state('start_servod')
         servod_started = self.get_verifier_state('servod_started')
@@ -1332,6 +1333,9 @@ class ServoHost(base_servohost.BaseServoHost):
             # if we cannot find required board on servo_v3
             return servo_constants.SERVO_STATE_NEED_REPLACEMENT
         if servo_fw == hosts.VERIFY_FAILED:
+            logging.info(servo_fw_update)
+            if hasattr(servo_fw_update, 'servo_updater_issue_detected'):
+                return servo_constants.SERVO_STATE_SERVO_UPDATER_ISSUE
             return servo_constants.SERVO_STATE_NEED_REPLACEMENT
 
         if dut_connected == hosts.VERIFY_FAILED:

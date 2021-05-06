@@ -20,6 +20,10 @@ class ServoFwVersionMissedError(Exception):
     """Raised when Available version is not detected."""
 
 
+class ServoUpdaterError(Exception):
+    """Raised when detected issue with servo_updater."""
+
+
 class _BaseUpdateServoFw(object):
     """Base class to update firmware on servo"""
 
@@ -276,6 +280,9 @@ SERVO_UPDATERS = {
         topology_constants.ST_SWEETBERRY_TYPE: UpdateSweetberryFw,
 }
 
+# List known, tracking issue related to servo_updater.
+SERVO_UPDATER_ISSUE_MSGS = ('Configuration not set', )
+
 
 def _run_update_attempt(updater, topology, try_count, force_update,
                         ignore_version, channel):
@@ -305,8 +312,13 @@ def _run_update_attempt(updater, topology, try_count, force_update,
             if not updater.need_update(ignore_version=ignore_version,
                                        channel=channel):
                 success = True
-        except Exception as e:
-            logging.debug('(Not critical) fail to update %s; %s', board, e)
+        except Exception as er:
+            error_message = str(er)
+            logging.debug('(Not critical) fail to update %s; %s', board,
+                          error_message)
+            for message in SERVO_UPDATER_ISSUE_MSGS:
+                if message in error_message:
+                    raise ServoUpdaterError()
         if success:
             break
     return success
