@@ -35,6 +35,7 @@ from autotest_lib.server.hosts import repair_utils
 from autotest_lib.site_utils.admin_audit import verifiers as audit_verify
 from autotest_lib.site_utils.admin_audit import constants as audit_const
 from autotest_lib.site_utils.admin_audit import battery_validator
+from autotest_lib.site_utils.admin_audit import wifi_validator
 from six.moves import range
 
 try:
@@ -984,6 +985,44 @@ class AuditBattery(hosts.Verifier):
         return 'Ensure DUT battery is in good state.'
 
 
+class AuditWifi(hosts.Verifier):
+    """Verify that wifi chip on the host is detected correctly.
+
+    Check if the wifi chip on the host has been recognized and its
+    device driver been loaded into the kernel.
+    """
+
+    @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
+    def verify(self, host):
+        # pylint: disable=missing-docstring
+
+        # All exceptions get caught within the call to validate. The
+        # method always returns an appropriate state, including cases
+        # when timeout happens during detecting the state of wifi chip
+        # on the host.
+        state = self._get_validator(host).validate()
+
+        if state == audit_const.HW_STATE_UNKNOWN:
+            # Either timeout, or some other exception was witnessed
+            # while determining the wifi state.
+            raise hosts.AutoservNonCriticalVerifyError(
+                    'DUT wifi state cannot be extracted.')
+        if state == audit_const.HW_STATE_NEED_REPLACEMENT:
+            logging.info('Detected problems with wifi chip on the DUT.')
+
+    def _is_applicable(self, host):
+        return self._get_validator(host).is_wifi_expected()
+
+    def _get_validator(self, host):
+        if not getattr(self, '_validator', None):
+            self._validator = wifi_validator.WifiValidator(host)
+        return self._validator
+
+    @property
+    def description(self):
+        return 'Ensure that WiFi chip is detected on the device'
+
+
 class ServoKeyboardMapVerifier(hosts.Verifier):
     """Not critical verify to flash servo keyboard for the host.
 
@@ -1653,6 +1692,7 @@ def _cros_verify_extended_dag():
             (StopStartUIVerifier, 'stop_start_ui', ('ssh', )),
             (DUTStorageVerifier, 'storage', ('ssh', )),
             (AuditBattery, 'audit_battery', ()),
+            (AuditWifi, 'audit_wifi', ('ssh', )),
             (GscToolPresentVerifier, 'dut_gsctool', ('ssh', )),
             (ServoKeyboardMapVerifier, 'dut_servo_keyboard', ('ssh', )),
             (ServoMacAddressVerifier, 'dut_servo_macaddr', ('ssh', )),
