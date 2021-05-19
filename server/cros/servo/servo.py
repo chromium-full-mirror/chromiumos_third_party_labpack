@@ -1653,7 +1653,7 @@ class Servo(object):
         @param en: a string of 'on' or 'off' for PD communication.
         """
         if self.get_servo_type().startswith('servo_v4'):
-            self.set_nocheck('servo_v4_pd_comm', en)
+            self.set_nocheck('servo_pd_comm', en)
         else:
             logging.debug('Not a servo v4, unable to set PD comm to %s.', en)
 
