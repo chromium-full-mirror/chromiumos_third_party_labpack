@@ -31,8 +31,10 @@ from autotest_lib.client.common_lib import error
 
 try:
     from autotest_lib.utils.frozen_chromite.lib import metrics
-except ImportError:
+    logging.debug("Repair: using real metrics")
+except ImportError as e:
     from autotest_lib.client.bin.utils import metrics_mock as metrics
+    logging.debug("Repair: using fake metrics %s", e)
 
 #Regular experssion pattern to filter out unwanted hostname.
 _HOSTNAME_PATTERN = 'chromeos[0-9]-row[0-9]+[a-z]?-rack[0-9]+[a-z]?-host[0-9]+'
