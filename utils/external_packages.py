@@ -894,11 +894,11 @@ class ElasticSearchPackage(ExternalPackage):
 
 class Urllib3Package(ExternalPackage):
     """elasticsearch-py package."""
-    version = '1.9'
+    version = '1.23'
     url_filename = 'urllib3-%s.tar.gz' % version
     local_filename = url_filename
     urls = (_CHROMEOS_MIRROR + local_filename,)
-    hex_sum = '9522197efb2a2b49ce804de3a515f06d97b6602f'
+    hex_sum = '0c54209c397958a7cebe13cb453ec8ef5833998d'
     _build_and_install = ExternalPackage._build_and_install_from_package
     _build_and_install_current_dir = (
             ExternalPackage._build_and_install_current_dir_setup_py)
