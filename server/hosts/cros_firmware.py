@@ -46,6 +46,7 @@ import json
 import logging
 
 import common
+from autotest_lib.client.bin import utils
 from autotest_lib.client.common_lib import global_config
 from autotest_lib.client.common_lib import hosts
 from autotest_lib.server import afe_utils
@@ -479,7 +480,16 @@ class FirmwareVersionVerifier(hosts.Verifier):
                      current_firmware, stable_firmware)
         self._check_hardware_match(current_firmware, stable_firmware)
         try:
-            host.run('chromeos-firmwareupdate --mode=autoupdate')
+            if self.use_recovery_mode(host):
+                # Disable software-controlled write-protect for both FPROMs
+                # as recovery is updating RO+RW. This change is present as part
+                # of deployment scrip but we still see this devices in the lab.
+                for fprom in ['host', 'ec']:
+                    cmd = 'flashrom -p %s --wp-disable' % fprom
+                    host.run(cmd, ignore_status=True)
+                host.run('chromeos-firmwareupdate --mode=recovery')
+            else:
+                host.run('chromeos-firmwareupdate --mode=autoupdate')
             host.reboot()
         except Exception as e:
             message = ('chromeos-firmwareupdate failed: from '
@@ -493,6 +503,11 @@ class FirmwareVersionVerifier(hosts.Verifier):
                        'to %s, now running %s instead')
             raise hosts.AutoservVerifyError(
                     message % (stable_firmware, final_firmware))
+
+    def use_recovery_mode(self, host):
+        """Check if we can run updater in recovery mode."""
+        # Use only for StableLab, do not use it for local/moblab environments.
+        return utils.host_is_in_lab_zone(host.hostname)
 
     @property
     def description(self):
