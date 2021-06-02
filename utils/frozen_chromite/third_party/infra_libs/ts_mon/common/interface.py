@@ -105,8 +105,10 @@ def flush():
     logging.debug('ts_mon: sending metrics is disabled.')
     return
 
-  if not state.global_monitor or not state.target:
+  if not state.global_monitor:
     raise errors.MonitoringNoConfiguredMonitorError(None)
+  if not state.target:
+    raise errors.MonitoringNoConfiguredTargetError(None)
 
   if state.invoke_global_callbacks_on_flush:
     invoke_global_callbacks()

@@ -103,7 +103,10 @@ class MonitoringNoConfiguredTargetError(MonitoringError):
     self.metric = metric
 
   def __str__(self):
-    return 'Metric "%s" was sent with no Target configured.' % (self.metric)
+    if self.metric is not None:
+      return 'Metric "%s" was sent with no Target configured.' % (self.metric)
+    else:
+      return 'Metrics were sent with no Target configured.'
 
 
 class MonitoringFailedToFlushAllMetricsError(MonitoringError):
