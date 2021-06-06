@@ -25,7 +25,12 @@ class BluetoothValidator(object):
     """
 
     # Command to check whether the bluetooth device is powered-on and
-    # responsive on system DBus.
+    # responsive on system DBus. In case of successful Bluetooth
+    # detection, the exit code will be 0 (success) and output string
+    # will approximately be like '\s*variant\s+boolean\s+true'. In
+    # case of failure, the output will either include 'false' instead
+    # of 'true', or the exist code will be non-zero, and output will
+    # be empty.
     _BLUETOOTH_DETECTION_CMD = ('dbus-send --print-reply --system '
                                 '--dest=org.bluez /org/bluez/hci0 '
                                 'org.freedesktop.DBus.Properties.Get '

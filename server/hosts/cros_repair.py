@@ -36,6 +36,7 @@ from autotest_lib.site_utils.admin_audit import verifiers as audit_verify
 from autotest_lib.site_utils.admin_audit import constants as audit_const
 from autotest_lib.site_utils.admin_audit import battery_validator
 from autotest_lib.site_utils.admin_audit import wifi_validator
+from autotest_lib.site_utils.admin_audit import bluetooth_validator
 from six.moves import range
 
 try:
@@ -1023,6 +1024,35 @@ class AuditWifi(hosts.Verifier):
         return 'Ensure that WiFi chip is detected on the device'
 
 
+class AuditBluetooth(hosts.Verifier):
+    """Verify that bluetooth on the host is detected correctly.
+
+    Check if bluetooth on the host has been powered-on and is responding.
+    """
+
+    @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
+    def verify(self, host):
+        # pylint: disable=missing-docstring
+
+        # All exceptions get caught within the call to validate. The
+        # method always returns an appropriate state, including cases
+        # when timeout happens during detecting the state of bluetooth
+        # on the host.
+        state = self._get_validator(host).validate()
+
+        if state == audit_const.HW_STATE_NEED_REPLACEMENT:
+            logging.info('Detected problems with bluetooth on the DUT.')
+
+    def _get_validator(self, host):
+        if not getattr(self, '_validator', None):
+            self._validator = bluetooth_validator.BluetoothValidator(host)
+        return self._validator
+
+    @property
+    def description(self):
+        return 'Ensure that bluetooth is working correctly on the host'
+
+
 class ServoKeyboardMapVerifier(hosts.Verifier):
     """Not critical verify to flash servo keyboard for the host.
 
@@ -1692,7 +1722,8 @@ def _cros_verify_extended_dag():
             (StopStartUIVerifier, 'stop_start_ui', ('ssh', )),
             (DUTStorageVerifier, 'storage', ('ssh', )),
             (AuditBattery, 'audit_battery', ()),
-            (AuditWifi, 'audit_wifi', ('ssh', )),
+            (AuditWifi, 'audit_wifi', ('ssh', 'writable')),
+            (AuditBluetooth, 'audit_bluetooth', ('ssh', 'writable')),
             (GscToolPresentVerifier, 'dut_gsctool', ('ssh', )),
             (ServoKeyboardMapVerifier, 'dut_servo_keyboard', ('ssh', )),
             (ServoMacAddressVerifier, 'dut_servo_macaddr', ('ssh', )),
