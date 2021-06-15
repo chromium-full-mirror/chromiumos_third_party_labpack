@@ -566,9 +566,16 @@ class _CCDPowerDeliveryVerifier(hosts.Verifier):
     """
     @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
     def verify(self, host):
+        if host.get_servo():
+            self._printControl(host.get_servo(), 'ppdut5_mv')
+            self._printControl(host.get_servo(), 'ppchg5_mv')
         if host.get_servo().get('servo_pd_role') == 'snk':
             raise hosts.AutoservNonCriticalVerifyError(
                     'Power delivery not in src role.')
+
+    def _printControl(self, servo, control):
+        if servo.has_control(control):
+            logging.info("%s: %s", control, servo.get(control))
 
     def _is_applicable(self, host):
         return (host.is_in_lab() and
