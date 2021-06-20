@@ -31,6 +31,10 @@ class LabstationHost(base_servohost.BaseServoHost):
 
     VERSION_PREFIX = provision.CROS_VERSION_PREFIX
 
+    # The file indicates the labstation don't want to be rebooted via an
+    # automated task if it presents.
+    NO_REBOOT_FLAG_FILE = "/tmp/no_reboot"
+
     @staticmethod
     def check_host(host, timeout=10):
         """
@@ -99,6 +103,12 @@ class LabstationHost(base_servohost.BaseServoHost):
         if self._is_servo_in_use():
             logging.info('Aborting reboot action because some DUT(s) are'
                          ' currently using servo(s).')
+            return
+
+        if self._is_no_reboot_flag_present():
+            logging.info(
+                    'Aborting reboot because no reboot flag file %s'
+                    ' presents.', self.NO_REBOOT_FLAG_FILE)
             return
 
         update_state = self._check_update_status()
@@ -266,6 +276,15 @@ class LabstationHost(base_servohost.BaseServoHost):
         result = self.run(cmd, ignore_status=True)
         return bool(result.stdout)
 
+    def _is_no_reboot_flag_present(self):
+        """Determine if a no reboot flag file present on the labstation.
+        Some debugging efforts don't want its target labstation get rebooted
+        during automated tasks, it can be achieved by touch a flag file on
+        the labstation.
+
+        @returns True if the flag file exists.
+        """
+        return self.is_file_exists(self.NO_REBOOT_FLAG_FILE)
 
     def _cleanup_post_reboot(self):
         """Clean up all xxxx_reboot file after reboot."""
