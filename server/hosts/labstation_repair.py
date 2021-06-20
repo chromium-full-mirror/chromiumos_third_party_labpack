@@ -34,26 +34,28 @@ class _LabstationUpdateVerifier(hosts.Verifier):
 
     @timeout_util.TimeoutDecorator(cros_constants.LONG_VERIFY_TIMEOUT_SEC)
     def verify(self, host):
-        """First, only run this verifier if the host is in the physical lab.
-        Secondly, skip if the test is being run by test_that, because subnet
-        restrictions can cause the update to fail.
+        """Ensure the labstation is updated to the latest stable_version
+        OS image.
         """
-        if host.is_in_lab() and host.job and host.job.in_lab:
-            host.update_cros_version_label()
-            info = host.host_info_store.get()
-            if bool(UPDATE_EXEMPTED_POOL & info.pools):
-                logging.info("Skip update because the labstation is in"
-                             " one of following exempted pool: %s", info.pools)
-                return
+        host.update_cros_version_label()
+        info = host.host_info_store.get()
+        if bool(UPDATE_EXEMPTED_POOL & info.pools):
+            logging.info(
+                    "Skip update because the labstation is in"
+                    " one of following exempted pool: %s", info.pools)
+            return
 
-            stable_version = info.stable_versions.get('cros')
-            if stable_version:
-                host.update_image(stable_version=stable_version)
-            else:
-                raise hosts.AutoservVerifyError('Failed to check/update'
-                                                ' labstation due to no stable'
-                                                '_version found in host_info'
-                                                '_store.')
+        stable_version = info.stable_versions.get('cros')
+        if stable_version:
+            host.update_image(stable_version=stable_version)
+        else:
+            raise hosts.AutoservVerifyError('Failed to check/update'
+                                            ' labstation due to no stable'
+                                            '_version found in host_info'
+                                            '_store.')
+
+    def _is_applicable(self, host):
+        return not host.is_localhost()
 
     @property
     def description(self):
