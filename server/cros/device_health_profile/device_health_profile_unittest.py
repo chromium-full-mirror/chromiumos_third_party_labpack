@@ -225,6 +225,23 @@ class DeviceHealthProfileTestCase(unittest.TestCase):
         self.assertGreater(self.dhp.get_servo_micro_fw_update_time_epoch(),
                            cached_time_epoch)
 
+    def test_get_cr50_fw_update_time(self):
+        cached_time = self.dhp.get_cr50_fw_update_time()
+        self.assertRegexpMatches(cached_time, r'\d{4}[-/]\d{2}[-/]\d{2}')
+        # Sleep 1 second so updated timestamp is different than current one.
+        time.sleep(1)
+        self.dhp.refresh_cr50_fw_update_run_time()
+        self.assertNotEqual(cached_time, self.dhp.get_cr50_fw_update_time())
+
+    def test_get_cr50_fw_update_time_epoch(self):
+        cached_time_epoch = self.dhp.get_cr50_fw_update_time_epoch()
+        self.assertEqual(type(cached_time_epoch), int)
+        # Sleep 1 second so updated timestamp is different than current one.
+        time.sleep(1)
+        self.dhp.refresh_cr50_fw_update_run_time()
+        self.assertGreater(self.dhp.get_cr50_fw_update_time_epoch(),
+                           cached_time_epoch)
+
 
 if __name__ == '__main__':
     unittest.main()

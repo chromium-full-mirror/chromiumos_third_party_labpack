@@ -1216,6 +1216,71 @@ class _ECRebootRepair(hosts.RepairAction):
         return 'Reboot EC'
 
 
+class _CR50FwReflashRepair(hosts.RepairAction):
+    """
+    Reflash CR50 firmware and reboot AP from DUT side to wake it up.
+    """
+
+    # Command to update cr50 firmware with post-reset and reboot the DUT.
+    UPDATE_CMD = 'gsctool -ap /opt/google/cr50/firmware/cr50.bin.%s ; reboot'
+
+    @timeout_util.TimeoutDecorator(cros_constants.REPAIR_TIMEOUT_SEC)
+    def repair(self, host):
+        host_info = host.get_dut_host_info()
+        cr50 = host_info.get_label_value('cr50')
+        if cr50 == 'prepvt':
+            cmd = self.UPDATE_CMD % 'prepvt'
+        else:
+            cmd = self.UPDATE_CMD % 'prod'
+        r = host.dut_run(cmd, ignore_status=True, timeout=120)
+        if r.exit_status != 0:
+            logging.info('The process finished with error')
+        # Record attempt in device profile.
+        dhp = host.get_dut_health_profile()
+        dhp.refresh_cr50_fw_update_run_time()
+        # Wait for 30 seconds to apply effect.
+        # We do not need DUT to boot as restart servod WIll take times.
+        time.sleep(30)
+        host.restart_servod()
+
+    def is_time_to_try(self, dhp):
+        """Verify that it is time when we can try to re-flash fw on cr50 (H1).
+
+        Re-flashing limited to once per once per day to avoid over-flashing
+        the device.
+        """
+        today_time = int(time.time())
+        last_check = dhp.get_cr50_fw_update_time_epoch()
+        can_run = today_time > (last_check + (24 * 60 * 60))
+        if not can_run:
+            logging.info("The cr50 fw updated in last 24 hours.")
+        return can_run
+
+    def _is_applicable(self, host):
+        if not host.dut_run:
+            logging.info("SSH access to DUT is not present.")
+            return False
+        dhp = host.get_dut_health_profile()
+        if not dhp:
+            logging.info("Device profile is not loaded.")
+            return False
+        if not self.is_time_to_try(dhp):
+            logging.info("Update limited to once per day.")
+            return False
+        if host.is_localhost():
+            logging.info("Not applicable for localhost.")
+            return False
+        host_info = host.get_dut_host_info()
+        if not host_info.get_label_value('cr50'):
+            logging.info("CR50 is not expected to be on the DUT.")
+            return False
+        return True
+
+    @property
+    def description(self):
+        return 'Reflash Cr50 firmware and reboot AP from DUT side'
+
+
 class _DutRebootRepair(hosts.RepairAction):
     """
     Reboot DUT to recover some servo controls depending on EC console.
@@ -1436,6 +1501,8 @@ def _servo_repair_actions():
              dut_triggers),
             (_ECRebootRepair, 'servo_ec_reboot', ['servod_connection'],
              dut_triggers),
+            (_CR50FwReflashRepair, 'servo_cr50_fw_reflash',
+             ['servod_connection'], dut_triggers),
     )
 
 

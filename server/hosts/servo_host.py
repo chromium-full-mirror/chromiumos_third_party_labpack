@@ -159,6 +159,8 @@ class ServoHost(base_servohost.BaseServoHost):
         self._closed = False
         # Per-thread local data
         self._local = threading.local()
+        # SSH access to run command on DUT.
+        self.dut_run = None
 
     def _initialize(self,
                     servo_host='localhost',
@@ -1555,7 +1557,8 @@ def create_servo_host(dut,
                       try_servo_repair=False,
                       try_servo_recovery=True,
                       dut_host_info=None,
-                      dut_health_profile=None):
+                      dut_health_profile=None,
+                      dut_run=None):
     """Create a ServoHost object for a given DUT, if appropriate.
 
     This function attempts to create and verify or repair a `ServoHost`
@@ -1610,6 +1613,7 @@ def create_servo_host(dut,
     @param dut_host_info:       A HostInfo object of the DUT that connected
                                 to this servo.
     @param dut_health_profile:  DUT repair info with history.
+    @param dut_run:             SSH access to run command on the DUT.
 
     @returns: A ServoHost object or None. See comments above.
 
@@ -1679,6 +1683,8 @@ def create_servo_host(dut,
         newhost.set_dut_hostname(dut.hostname)
     if dut_host_info:
         newhost.set_dut_host_info(dut_host_info)
+    if dut_run:
+        newhost.dut_run = dut_run
     if dut_health_profile and (try_lab_servo or try_servo_repair):
         try:
             if newhost.is_localhost():

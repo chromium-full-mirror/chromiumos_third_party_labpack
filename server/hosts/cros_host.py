@@ -384,7 +384,8 @@ class CrosHost(abstract_ssh.AbstractSSHHost):
                 try_servo_repair=try_servo_repair,
                 try_servo_recovery=try_servo_recovery,
                 dut_host_info=self.host_info_store.get(),
-                dut_health_profile=dut_health_profile)
+                dut_health_profile=dut_health_profile,
+                dut_run=self.run)
         if dut_health_profile.is_loaded():
             logging.info('Device health profile loaded.')
             # The device profile is located in the servo_host which make it

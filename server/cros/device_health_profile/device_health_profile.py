@@ -388,6 +388,19 @@ class DeviceHealthProfile(object):
         last_time = self.get_servo_micro_fw_update_time()
         return int(time.mktime(time.strptime(last_time, TIME_PATTERN)))
 
+    def get_cr50_fw_update_time(self):
+        """Get the timestamp of when run last fw update for cr50.
+        Example "2020-01-01 15:05:05"
+        """
+        last_time = self._get_value(LAST_CR50_FW_UPDATE_RUN_TIME_KEY)
+        return last_time or DEFAULT_TIMESTAMP
+
+    def get_cr50_fw_update_time_epoch(self):
+        """Get the unix time of when run last fw update for cr50.
+        """
+        last_time = self.get_cr50_fw_update_time()
+        return int(time.mktime(time.strptime(last_time, TIME_PATTERN)))
+
     def set_cros_stable_version(self, build):
         """Set the most recent used cros image during repair.
         """
@@ -420,6 +433,13 @@ class DeviceHealthProfile(object):
         """
         return self._update_profile(
                 LAST_SERVO_MICRO_FW_UPDATE_RUN_TIME_KEY,
+                time.strftime(TIME_PATTERN, time.localtime()))
+
+    def refresh_cr50_fw_update_run_time(self):
+        """Get the timestamp of when run last fw update for cr50.
+        """
+        return self._update_profile(
+                LAST_CR50_FW_UPDATE_RUN_TIME_KEY,
                 time.strftime(TIME_PATTERN, time.localtime()))
 
     def refresh_update_time(self):
