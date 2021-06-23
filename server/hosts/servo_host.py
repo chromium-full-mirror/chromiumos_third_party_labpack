@@ -1050,11 +1050,20 @@ class ServoHost(base_servohost.BaseServoHost):
         """Get logs that can help debugging servo/servod problem from
         the servohost
         """
+        log_dir = os.path.join(outdir, 'servohost_%s' % self.hostname)
+        if os.path.isdir(log_dir):
+            # In multi-DUTs testing, each DUTs will may their own servohost
+            # instance, where could cause duplicate efforts if they share a
+            # same servohost, so we can just skip the collect if the log
+            # dir already exists.
+            logging.info(
+                    'Skip dmesg and messages logs collecting as %s'
+                    ' already exists.', log_dir)
+            return
         logging.info('Collecting dmesg and messages from servohost %s',
                      self.hostname)
-        log_dir = os.path.join(outdir, 'servohost_%s' % self.hostname)
-        logging.info('Saving servohost logs to %s.', log_dir)
         os.mkdir(log_dir)
+        logging.info('Saving servohost logs to %s.', log_dir)
         # First collect dmesg from the servohost.
         crashcollect.collect_command(self, 'dmesg -H',
                                      os.path.join(log_dir, 'dmesg'))
