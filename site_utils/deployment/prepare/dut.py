@@ -25,6 +25,8 @@ from autotest_lib.server.hosts import host_info
 from autotest_lib.server.hosts import servo_host
 from autotest_lib.server.hosts import cros_constants
 from autotest_lib.server.hosts import servo_constants
+from autotest_lib.site_utils.admin_audit import constants
+from autotest_lib.site_utils.admin_audit import rpm_validator
 
 
 _FIRMWARE_UPDATE_TIMEOUT = 600
@@ -319,22 +321,26 @@ def verify_labstation_RPM_config_unsafe(host):
     powerunit_outlet   = host_info.attributes.get('powerunit_outlet')
 
     powerunit_hasinfo = (bool(powerunit_hostname), bool(powerunit_outlet))
-
     if powerunit_hasinfo == (True, True):
         pass
     elif powerunit_hasinfo == (False, False):
+        rpm_validator.set_rpm_state(host, constants.RPM_STATE_MISSING_CONFIG)
         logging.info("intentionally skipping labstation %s", host.hostname)
         return
     else:
+        rpm_validator.set_rpm_state(host, constants.RPM_STATE_WRONG_CONFIG)
         msg = "inconsistent power info: %s %s" % (
             powerunit_hostname, powerunit_outlet
         )
         logging.error(msg)
         raise Exception(msg)
 
+    # Set wrong config until proven otherwise.
+    rpm_validator.set_rpm_state(host, constants.RPM_STATE_WRONG_CONFIG)
     logging.info("Shutting down labstation...")
     host.rpm_power_off_and_wait()
     host.rpm_power_on_and_wait()
+    rpm_validator.set_rpm_state(host, constants.RPM_STATE_WORKING)
     logging.info("RPM Check Successful")
 
 
