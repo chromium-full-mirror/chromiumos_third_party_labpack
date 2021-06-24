@@ -80,6 +80,9 @@ def _is_firmware_testing_device(host):
             and `FaftFirmwareRepair`; a false value otherwise.
     """
     info = host.host_info_store.get()
+    logging.debug(
+            'Checking if the DUT is belong to one of'
+            ' firmware testing pools: %s', _FIRMWARE_REPAIR_POOLS)
     return bool(info.pools & _FIRMWARE_REPAIR_POOLS)
 
 
@@ -429,6 +432,9 @@ class FirmwareVersionVerifier(hosts.Verifier):
     def verify(self, host):
         # Test 1 - The DUT is not excluded from updates.
         if not _is_firmware_update_supported(host):
+            logging.info('DUT belongs to a firmware testing pool'
+                         ' which exempted stable firmware update,'
+                         ' skipping firmware by this action.')
             return
         # Test 2 - The DUT has an assigned stable firmware version.
         info = host.host_info_store.get()
