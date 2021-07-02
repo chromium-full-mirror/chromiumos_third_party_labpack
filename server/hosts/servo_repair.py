@@ -90,11 +90,7 @@ class _UpdateVerifier(hosts.Verifier):
         if host.is_labstation():
             return False
         # Only run if the host is in the physical lab.
-        if not host.is_in_lab() or host.is_localhost():
-            return False
-        # Skip if the test is being run by test_that, because subnet
-        # restrictions can cause the update to fail.
-        return host.job and host.job.in_lab
+        return host.is_in_lab()
 
     @property
     def description(self):
@@ -157,9 +153,7 @@ class _RootServoPresentVerifier(hosts.Verifier):
         if not host.is_labstation():
             return False
         # Only run if the host is in the physical lab.
-        if not host.is_in_lab() or host.is_localhost():
-            return False
-        return True
+        return host.is_in_lab()
 
     @property
     def description(self):
@@ -188,9 +182,7 @@ class _RootServoV3PresentVerifier(hosts.Verifier):
         if host.is_labstation():
             return False
         # Only run if the host is in the physical lab.
-        if not host.is_in_lab() or host.is_localhost():
-            return False
-        return True
+        return host.is_in_lab()
 
     @property
     def description(self):
@@ -218,9 +210,7 @@ class _ServoFwVerifier(hosts.Verifier):
         if not host.is_labstation():
             return False
         # Only run if the host is in the physical lab.
-        if not host.is_in_lab() or host.is_localhost():
-            return False
-        return True
+        return host.is_in_lab()
 
     @property
     def description(self):

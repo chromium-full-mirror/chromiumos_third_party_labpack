@@ -166,6 +166,16 @@ class AbstractSSHHost(remote.RemoteHost):
         """
         return self._is_client_install_supported
 
+    def is_satlab(self):
+        """Determine if the host is part of satlab
+
+        TODO(otabek@): Remove or update to better logic to determime Satlab.
+
+        @returns True if ths host is running under satlab otherwise False.
+        """
+        if self._is_satlab is None:
+            self._is_satlab = self.hostname.startswith('satlab-')
+        return self._is_satlab
 
     @property
     def rpc_server_tracker(self):
