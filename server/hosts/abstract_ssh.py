@@ -173,7 +173,7 @@ class AbstractSSHHost(remote.RemoteHost):
 
         @returns True if ths host is running under satlab otherwise False.
         """
-        if self._is_satlab is None:
+        if not hasattr(self, '_is_satlab'):
             self._is_satlab = self.hostname.startswith('satlab-')
         return self._is_satlab
 
