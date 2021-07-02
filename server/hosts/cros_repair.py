@@ -574,6 +574,12 @@ class HWIDVerifier(hosts.Verifier):
                 req = host.run('vpd -g serial_number', ignore_status=True)
         return req.stdout
 
+    def _is_applicable(self, host):
+        if host.is_satlab():
+            logging.info('Not critical for Satlab. Skipping')
+            return False
+        return True
+
     @property
     def description(self):
         # pylint: disable=missing-docstring
