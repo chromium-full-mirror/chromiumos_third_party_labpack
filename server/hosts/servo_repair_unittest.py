@@ -125,6 +125,13 @@ SERVO_REPAIR_ACTIONS = (
                  'servo_hub_connected', 'servo_cr50_low_sbu', 'servo_cr50_off',
                  'servo_cr50_console', 'servo_power_delivery'
          ]),
+        (servo_repair._ResetECFromDUTSideRepair, 'servo_dut_ec_reset',
+         ['servod_connection'], [
+                 'servod_control', 'servo_lid_open', 'servo_ec_board',
+                 'servo_topology', 'servo_dut_connected',
+                 'servo_hub_connected', 'servo_cr50_low_sbu', 'servo_cr50_off',
+                 'servo_cr50_console', 'servo_power_delivery'
+         ]),
 )
 
 

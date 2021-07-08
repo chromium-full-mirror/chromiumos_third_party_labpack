@@ -1271,6 +1271,42 @@ class _CR50FwReflashRepair(hosts.RepairAction):
         return 'Reflash Cr50 firmware and reboot AP from DUT side'
 
 
+class _ResetECFromDUTSideRepair(hosts.RepairAction):
+    """
+    Reset EC from DUT side to wake CR50 up.
+    """
+
+    # Command to reset EC from DUT side.
+    CMD = 'ectool reboot_ec cold'
+
+    @timeout_util.TimeoutDecorator(cros_constants.REPAIR_TIMEOUT_SEC)
+    def repair(self, host):
+        r = host.dut_run(self.CMD, ignore_status=True, timeout=120)
+        if r.exit_status != 0:
+            logging.info('The process finished with error')
+        # Wait for 30 seconds to apply effect.
+        # We do not need DUT to boot as restart servod WIll take times.
+        time.sleep(30)
+        host.restart_servod()
+
+    def _is_applicable(self, host):
+        if not host.dut_run:
+            logging.info("SSH access to DUT is not present.")
+            return False
+        if not host.is_in_lab():
+            logging.info("Applicable only the host is in the physical lab.")
+            return False
+        host_info = host.get_dut_host_info()
+        if not host_info.get_label_value('cr50'):
+            logging.info("CR50 is not expected to be on the DUT.")
+            return False
+        return True
+
+    @property
+    def description(self):
+        return 'Reset EC from DUT side'
+
+
 class _DutRebootRepair(hosts.RepairAction):
     """
     Reboot DUT to recover some servo controls depending on EC console.
@@ -1492,6 +1528,8 @@ def _servo_repair_actions():
             (_ECRebootRepair, 'servo_ec_reboot', ['servod_connection'],
              dut_triggers),
             (_CR50FwReflashRepair, 'servo_cr50_fw_reflash',
+             ['servod_connection'], dut_triggers),
+            (_ResetECFromDUTSideRepair, 'servo_dut_ec_reset',
              ['servod_connection'], dut_triggers),
     )
 
