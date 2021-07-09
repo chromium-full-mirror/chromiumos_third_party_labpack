@@ -670,7 +670,7 @@ class FirmwareTpmVerifier(hosts.Verifier):
                 raise hosts.AutoservNonCriticalVerifyError(
                         'Unable to get %s from crossystem.' % field)
             if result.stdout != expected_value:
-                raise hosts.AutoservNonCriticalVerifyError(
+                raise hosts.AutoservVerifyError(
                         'Unexpected %s value: %s, expected: %s. This error'
                         ' may cause firmware provision fail due to the'
                         ' rollback protection.' %
