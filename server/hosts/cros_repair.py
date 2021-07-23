@@ -586,6 +586,107 @@ class HWIDVerifier(hosts.Verifier):
         return 'The host should have valid HWID and Serial Number'
 
 
+class RwVpdVerifier(hosts.Verifier):
+    """Verify and recover RW_VPD required values.
+
+    For more details please read b/186493393.
+    """
+
+    # Default required values for RW_VPD.
+    DEFAULT_VALUES = {
+            "should_send_rlz_ping":
+            0,
+            "gbind_attribute":
+            "=CikKIKxeOtv7AqiCHCDBHkyLN-HF0S7JRcZgsoIRvkPlfMqaEAAaA2V2ZRCX0O3NBg==",
+            "ubind_attribute":
+            "=CikKILiLqJanLAzsXFuVPmfc_aOZxnyNirT9iesdM6kt59x6EAEaA2V2ZRCIkb3GCQ==",
+    }
+
+    # Reset flash memory of RW_VPD on the host.
+    RESET_RW_VPD = 'flashrom -p host -i RW_VPD -E'
+
+    # List/Get/Set command to read/update RW_VPD values.
+    LIST_CMD = 'vpd -i RW_VPD -l'
+    GET_CMD = 'vpd -i RW_VPD -g %s'
+    SET_CMD = 'vpd -i RW_VPD -s %s=%s'
+
+    @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
+    def verify(self, host):
+        missed_key = self.get_missing_vpd_keys(host)
+        if len(missed_key) == 0:
+            logging.info('No values missed.')
+            return
+        logging.debug('Missed values: %s.', missed_key)
+
+        # If we received special error then we need to reset flash memory.
+        # Otherwise we can just restore values.
+        # Full list of error codes:
+        # http://cs/chromeos_public/src/platform/vpd/include/lib/lib_vpd.h?l=14
+        r = host.run(self.LIST_CMD, ignore_status=True)
+        # Trigger only for codes 11 and 12 as was tested.
+        # Possible candidates: 4, 5, 9, 10. Required testing each case separate.
+        if r.exit_status in (11, 12):
+            # To use flashrom we need to ensure the OS is stable-version to
+            # avoid unpredictable outcomes of flashrom.
+            self._request_for_reimage_host_to_stable_version(host)
+            logging.info('Erase RW_VPD "%s"', self.RESET_RW_VPD)
+            host.run(self.RESET_RW_VPD, ignore_status=True)
+
+        logging.debug('Started recovering required values.')
+        failed_keys = []
+        for k in self.DEFAULT_VALUES:
+            v = self.DEFAULT_VALUES[k]
+            req = host.run(self.GET_CMD % k, ignore_status=True)
+            if req.exit_status == 0:
+                logging.debug('Skipping fix for %s:%s', k, req.stdout.strip())
+                continue
+            logging.debug('Set value %s:%s.', k, v)
+            r = host.run(self.SET_CMD % (k, v), ignore_status=True)
+            if r.exit_status != 0:
+                logging.debug('Fail set value for %s', k)
+                failed_keys.append(k)
+        logging.debug('Finished recovering required values.')
+        if len(failed_keys):
+            raise hosts.AutoservNonCriticalVerifyError(
+                    'The RW_VPD failed to recover keys: %s' % failed_keys)
+        logging.debug('Verify that all vpd values were recovered.')
+        missed_key = self.get_missing_vpd_keys(host)
+        if len(missed_key) == 0:
+            logging.info('All values recovered.')
+            return
+        raise hosts.AutoservNonCriticalVerifyError(
+                'Fail to recover RW_VPD values: %s' % missed_key)
+
+    def get_missing_vpd_keys(self, host):
+        """Collect list of keys which value missed."""
+        keys = []
+        for k in self.DEFAULT_VALUES:
+            req = host.run(self.GET_CMD % k, ignore_status=True)
+            if req.exit_status != 0:
+                keys.append(k)
+        return keys
+
+    def _request_for_reimage_host_to_stable_version(self, host):
+        """Place request to re-image the host to the stable version.
+
+        Request will be placed by mimic PROVISION_FAILED flow.
+        @params host:   CrosHost instance
+        """
+        os_from_host = host.get_release_builder_path()
+        os_from_host_info = host.get_cros_repair_image_name()
+        if os_from_host != os_from_host_info:
+            host.run('touch %s' % provisioner.PROVISION_FAILED)
+            logging.debug('Placed request to re-image the host!')
+            raise hosts.AutoservNonCriticalVerifyError(
+                    'Operation with flashrom required stable version')
+        logging.debug('Device is on stable version: %s.', os_from_host)
+
+    @property
+    def description(self):
+        # pylint: disable=missing-docstring
+        return 'Verify and recover RW_VPD required values'
+
+
 class EnrollmentStateVerifier(hosts.Verifier):
     """Verify that the device's enrollment state is clean.
 
@@ -1726,6 +1827,7 @@ def _cros_verify_extended_dag():
     """Return the extended verification DAG for a `CrosHost`."""
     return (
             (StopStartUIVerifier, 'stop_start_ui', ('ssh', )),
+            (RwVpdVerifier, 'rw_vpd_recovery', ('ssh', )),
             (DUTStorageVerifier, 'storage', ('ssh', )),
             (AuditBattery, 'audit_battery', ()),
             (AuditWifi, 'audit_wifi', ('ssh', 'writable')),
@@ -1827,6 +1929,7 @@ def _cros_repair_actions():
     provision_triggers = _CROS_PROVISION_TRIGGERS + (
             'stop_start_ui',
             'dut_gsctool',
+            'rw_vpd_recovery',
     )
     powerwash_triggers = _CROS_POWERWASH_TRIGGERS
     usb_triggers = _CROS_USB_TRIGGERS
