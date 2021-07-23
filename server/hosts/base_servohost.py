@@ -17,6 +17,11 @@ import six.moves.xmlrpc_client
 import time
 import os
 
+try:
+    import docker
+except ImportError:
+    logging.info("Docker API is not installed in this environment")
+
 from autotest_lib.client.bin import utils
 from autotest_lib.client.common_lib import autotest_enum
 from autotest_lib.client.common_lib import error
@@ -71,9 +76,12 @@ class BaseServoHost(ssh_host.SSHHost):
 
         super(BaseServoHost, self)._initialize(hostname=hostname,
                                                *args, **dargs)
+
+        self._is_containerized_servod = self.hostname.endswith('docker_servod')
+
         self._is_localhost = (self.hostname == 'localhost'
                               and servo_host_ssh_port is None)
-        if self._is_localhost:
+        if self._is_localhost or self._is_containerized_servod:
             self._is_in_lab = False
         elif is_in_lab is None:
             self._is_in_lab = (utils.host_is_in_lab_zone(self.hostname)
@@ -140,6 +148,9 @@ class BaseServoHost(ssh_host.SSHHost):
 
         @returns True if ths host is a labstation otherwise False.
         """
+        if self.is_containerized_servod():
+            return False
+
         if self._is_labstation is None:
             board = self.get_board()
             self._is_labstation = board is not None and 'labstation' in board
@@ -223,12 +234,22 @@ class BaseServoHost(ssh_host.SSHHost):
         return self._is_localhost
 
 
+    def is_containerized_servod(self):
+        """Checks whether the servo host is a containerized servod.
+
+        @returns: True if using containerized servod, otherwise False.
+
+        """
+        return self._is_containerized_servod
+
     def is_cros_host(self):
         """Check if a servo host is running chromeos.
 
         @return: True if the servo host is running chromeos.
             False if it isn't, or we don't have enough information.
         """
+        if self.is_containerized_servod():
+            return False
         try:
             result = self.run('grep -q CHROMEOS /etc/lsb-release',
                               ignore_status=True, timeout=10)
@@ -572,6 +593,14 @@ class BaseServoHost(ssh_host.SSHHost):
                 logging.error(e)
                 raise error.AutoservRunError('command execution error',
                                              e.result_obj)
+        elif self.is_containerized_servod():
+            logging.info("Trying to run the command %s", command)
+            client = docker.from_env(timeout=300)
+            container = client.containers.get(self.hostname)
+            (exit_code, output) = container.exec_run("bash -c '%s'" % command)
+            return utils.CmdResult(command=command,
+                                   stdout=output,
+                                   exit_status=exit_code)
         else:
             run_args['connect_timeout'] = connect_timeout
             run_args['options'] = options
@@ -625,3 +654,24 @@ class BaseServoHost(ssh_host.SSHHost):
                     'The servohost was just rebooted, wait %s'
                     ' seconds for it to become ready', diff)
             time.sleep(diff)
+
+    def is_up(self, timeout=60, connect_timeout=None, base_cmd="true"):
+        """
+        Check if the remote host is up by ssh-ing and running a base command.
+
+        @param timeout: command execution timeout in seconds.
+        @param connect_timeout: ssh connection timeout in seconds.
+        @param base_cmd: a base command to run with ssh. The default is 'true'.
+        @returns True if the remote host is up before the timeout expires,
+                 False otherwise.
+        """
+        if self.is_containerized_servod():
+            client = docker.from_env(timeout=300)
+            try:
+                client.containers.get(self.hostname)
+            except docker.errors.NotFound:
+                return False
+            return True
+        else:
+            return super(BaseServoHost, self).is_up(timeout, connect_timeout,
+                                                    base_cmd)

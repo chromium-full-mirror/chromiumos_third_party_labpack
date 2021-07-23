@@ -25,6 +25,7 @@ class MockHost(object):
         self.host_info_store = mock.Mock()
         self.host_info_store.get.return_value = MockHostInfoStore()
         self.job = None
+        self._is_containerized_servod = False
 
     def check_cached_up_status(self):
         return True
