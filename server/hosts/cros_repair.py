@@ -937,28 +937,45 @@ class ServoUSBDriveVerifier(hosts.Verifier):
     @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
     def verify(self, host):
         # pylint: disable=missing-docstring
-        usb_dev = ''
-        try:
-            usb_dev = host._servo_host._probe_and_validate_usb_dev()
-        except hosts.AutoservRepairError as e:
-            # We USB drive not detected by servod
-            logging.debug('(Not critical) %s', e)
-        host_info = host.host_info_store.get()
-        if not usb_dev:
-            host_info.set_version_label(audit_const.SERVO_USB_STATE_PREFIX,
-                                        audit_const.HW_STATE_NOT_DETECTED)
-            host.host_info_store.commit(host_info)
-            raise hosts.AutoservNonCriticalVerifyError(
-                    'USB-drive is not detected or bad')
+        def probe_usb_key():
+            try:
+                return host._servo_host._probe_and_validate_usb_dev()
+            except hosts.AutoservRepairError as e:
+                # We USB drive not detected by servod
+                logging.debug('(Not critical) %s', e)
+            return ''
 
-        # Check if USB-drive marked for replacement.
+        host_info = host.host_info_store.get()
+        if not probe_usb_key():
+            # If the USB-drive is not detected then we can try to power-cycle
+            # it as attempt to recover it. We want to collect stats when
+            # we succeed.
+            try:
+                logging.debug('Power cycle usb-key to try recover it.')
+                host.servo.set('image_usbkey_pwr', 'off')
+                host.servo.set('image_usbkey_pwr', 'on')
+            except Exception as e:
+                logging.debug('(Not critical) %s', e)
+            # Re-verify if the power-cycle helped.
+            if probe_usb_key():
+                metrics_data = {'host': host.hostname}
+                metrics.Counter('chromeos/autotest/usbkey_power_cycle_success'
+                                ).increment(fields=metrics_data)
+            else:
+                host_info.set_version_label(audit_const.SERVO_USB_STATE_PREFIX,
+                                            audit_const.HW_STATE_NOT_DETECTED)
+                host.host_info_store.commit(host_info)
+                raise hosts.AutoservNonCriticalVerifyError(
+                        'USB-drive is not detected or bad')
+
+        # Check if the USB-drive is marked for replacement.
         usb_state = host_info.get_label_value(
                 audit_const.SERVO_USB_STATE_PREFIX)
         if usb_state and usb_state == audit_const.HW_STATE_NEED_REPLACEMENT:
-            # Allow to use USB-key marked for replacement.
-            # Goal to collect metrics to see if DUT still can recovered
+            # Allow to use USB-drive marked for replacement.
             return
             # TODO(otabek): restory when fix crbug.com/1164408
+            # Goal to collect metrics to see if DUT still can recovered
             # raise hosts.AutoservNonCriticalVerifyError(
             #         'USB-drive marked for replacement')
 
