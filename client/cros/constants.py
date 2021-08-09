@@ -6,9 +6,7 @@
 
 # Constants used by other constants.
 USER_DATA_DIR = '/home/chronos'
-# TODO b:169251326 terms below are set outside of this codebase
-# and should be updated when possible. ("whitelist" -> "allowlist")
-ALLOWLIST_DIR = '/var/lib/whitelist'
+DEVICESETTINGS_DIR = '/var/lib/devicesettings'
 LOG_DIR = '/var/log'
 
 # Rest of constants.
@@ -110,7 +108,7 @@ OAUTH2_WRAP_BRIDGE_NEW_URL = '/OAuthWrapBridge'
 OAUTH2_GET_AUTH_CODE_URL = '/o/oauth2/programmatic_auth'
 OAUTH2_GET_TOKEN_URL = '/o/oauth2/token'
 
-OWNER_KEY_FILE = ALLOWLIST_DIR + '/owner.key'
+OWNER_KEY_FILE = DEVICESETTINGS_DIR + '/owner.key'
 
 SERVICE_LOGIN_URL = '/accounts/ServiceLogin'
 SERVICE_LOGIN_NEW_URL = '/ServiceLogin'
@@ -118,7 +116,7 @@ SERVICE_LOGIN_AUTH_URL = '/ServiceLoginAuth'
 SERVICE_LOGIN_AUTH_ERROR = 'The username or password you entered is incorrect.'
 
 SESSION_MANAGER = 'session_manager'
-SIGNED_POLICY_FILE = ALLOWLIST_DIR + '/policy'
+SIGNED_POLICY_FILE = DEVICESETTINGS_DIR + '/policy'
 SPECIAL_CASE_DOMAIN = 'gmail.com'
 USER_POLICY_DIR = '/run/user_policy'
 USER_POLICY_KEY_FILENAME = 'policy.pub'

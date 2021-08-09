@@ -13,10 +13,14 @@ from autotest_lib.client.cros import constants
 _RM_FILES = ['/home/chronos/.oobe_completed',
              '/home/chronos/Local\ State',
              '/var/cache/shill/default.profile']
-_RM_DIRS = ['/home/.shadow/*',
-            os.path.join(constants.ALLOWLIST_DIR, '*'),
-            '/var/cache/app_pack',
-            '/var/lib/tpm']
+# TODO(b/187793661) Delete /var/lib/whitelist once migration is finished.
+_RM_DIRS = [
+        '/home/.shadow/*',
+        os.path.join(constants.DEVICESETTINGS_DIR, '*'),
+        '/var/lib/whitelist/*',
+        '/var/cache/app_pack',
+        '/var/lib/tpm',
+]
 
 
 class NoTPMPasswordException(Exception):
