@@ -62,6 +62,7 @@ class BaseServoHost(ssh_host.SSHHost):
                     hostname,
                     is_in_lab=None,
                     servo_host_ssh_port=None,
+                    servod_docker=None,
                     *args,
                     **dargs):
         """Construct a BaseServoHost object.
@@ -77,7 +78,7 @@ class BaseServoHost(ssh_host.SSHHost):
         super(BaseServoHost, self)._initialize(hostname=hostname,
                                                *args, **dargs)
 
-        self._is_containerized_servod = self.hostname.endswith('docker_servod')
+        self._is_containerized_servod = bool(servod_docker)
 
         self._is_localhost = (self.hostname == 'localhost'
                               and servo_host_ssh_port is None)
