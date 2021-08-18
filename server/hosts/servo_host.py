@@ -24,6 +24,7 @@ import tempfile
 import time
 import six
 import six.moves.xmlrpc_client
+import socket
 
 try:
     import docker
@@ -750,6 +751,9 @@ class ServoHost(base_servohost.BaseServoHost):
                 "SERIAL=%s" % self.servo_serial,
                 "PORT=%s" % self.servo_port,
         ]
+        container_network = "default_moblab"
+        if socket.gethostname().startswith('satlab'):
+            container_network = "default_satlab"
         logging.info('Servod container environment: %s', environment)
         try:
             client.containers.run(
@@ -758,7 +762,7 @@ class ServoHost(base_servohost.BaseServoHost):
                     privileged=True,
                     name=self.hostname,
                     hostname=self.hostname,
-                    network="default_moblab",
+                    network=container_network,
                     cap_add=["NET_ADMIN"],
                     detach=True,
                     volumes=["/dev:/dev"],
