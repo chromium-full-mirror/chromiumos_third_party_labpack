@@ -1,8 +1,0 @@
-dEQP-GLES31.functional.geometry_shading.layered.render_with_default_layer_2d_array,Fail
-dEQP-GLES31.functional.geometry_shading.layered.render_with_default_layer_cubemap,Fail
-dEQP-GLES31.functional.geometry_shading.layered.render_with_default_layer_2d_multisample_array,Fail
-dEQP-GLES31.functional.geometry_shading.layered.render_with_default_layer_3d,Fail
-dEQP-VK.subgroups.ballot_broadcast.compute.subgroupbroadcast_u16vec4,Fail
-dEQP-VK.subgroups.ballot_broadcast.compute.subgroupbroadcast_f16vec4,Fail
-dEQP-VK.subgroups.ballot_broadcast.compute.subgroupbroadcast_u8vec4,Fail
-dEQP-VK.subgroups.ballot_broadcast.compute.subgroupbroadcast_i8vec4,Fail

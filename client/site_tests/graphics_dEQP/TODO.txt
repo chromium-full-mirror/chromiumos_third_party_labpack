@@ -1,6 +1,0 @@
-Rename any reference to "master" once upstream does so. See b/169251326
-
-The code may need to remain compatible for ChromeOS supported Android release
-branches, where CTS/dEQP are rarely changed.
-
-https://android.googlesource.com/platform/external/deqp/+/master/android/cts/master

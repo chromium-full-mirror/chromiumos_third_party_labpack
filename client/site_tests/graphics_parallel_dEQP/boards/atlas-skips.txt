@@ -1,2 +1,0 @@
-# Times out at 60 seconds
-dEQP-VK.ssbo.phys.layout.random.16bit.scalar.13

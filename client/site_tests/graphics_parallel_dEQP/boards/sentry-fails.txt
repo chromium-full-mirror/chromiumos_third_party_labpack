@@ -1,9 +1,0 @@
-dEQP-GLES31.functional.image_load_store.2d_array.atomic.exchange_r32f_return_value,Fail
-dEQP-GLES31.functional.image_load_store.3d.atomic.exchange_r32f_return_value,Fail
-dEQP-GLES31.functional.image_load_store.cube.atomic.exchange_r32f_return_value,Fail
-dEQP-GLES31.functional.synchronization.inter_invocation.image_alias_write,Fail
-dEQP-GLES31.functional.synchronization.inter_invocation.image_atomic_read_write,Fail
-dEQP-VK.subgroups.ballot_broadcast.compute.subgroupbroadcast_f16vec4,Fail
-dEQP-VK.subgroups.ballot_broadcast.compute.subgroupbroadcast_i8vec4,Fail
-dEQP-VK.subgroups.ballot_broadcast.compute.subgroupbroadcast_u16vec4,Fail
-dEQP-VK.subgroups.ballot_broadcast.compute.subgroupbroadcast_u8vec4,Fail

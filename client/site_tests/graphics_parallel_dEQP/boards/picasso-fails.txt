@@ -1,3 +1,0 @@
-dEQP-VK.draw.multiple_interpolation.structured.4_samples,Fail
-dEQP-VK.api.info.android.no_unknown_extensions,Fail
-dEQP-VK.spirv_assembly.instruction.compute.float32.comparison_1.modfstruct,Crash

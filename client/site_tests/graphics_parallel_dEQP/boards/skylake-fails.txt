@@ -1,5 +1,0 @@
-dEQP-VK.glsl.builtin.precision.cos.highp.scalar,Fail
-dEQP-VK.glsl.builtin.precision.cos.mediump.scalar,Fail
-dEQP-VK.glsl.builtin.precision.sin.mediump.scalar,Fail
-dEQP-VK.glsl.builtin.precision.sin.highp.scalar,Fail
-dEQP-VK.api.info.android.no_unknown_extensions,Fail

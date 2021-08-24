@@ -1,8 +1,0 @@
-# These all time out, save lab time by skipping them.
-dEQP-VK.geometry.layered.3d.render_to_all
-dEQP-VK.geometry.layered.cube_array.36_36_12.secondary_cmd_buffer_inherit_framebuffer
-dEQP-VK.geometry.layered.cube_array.64_64_12.readback
-dEQP-VK.geometry.layered.cube_array.fragment_layer
-dEQP-VK.geometry.layered.cube_array.secondary_cmd_buffer
-dEQP-VK.spirv_assembly.instruction.graphics.spirv_ids_abuse.lots_ids_.*
-dEQP-VK.ubo.random.all_out_of_order_offsets.45
