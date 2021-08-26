@@ -229,8 +229,9 @@ class ServoHost(base_servohost.BaseServoHost):
         # make sure the labstation is up here, in the case of the labstation is
         # in the middle of reboot.
         self._is_locked = False
-        if (self.wait_up(self.REBOOT_TIMEOUT) and self.is_in_lab()
-            and self.is_labstation()):
+        if (not self.is_containerized_servod()
+                    and self.wait_up(self.REBOOT_TIMEOUT) and self.is_in_lab()
+                    and self.is_labstation()):
             self._lock()
             try:
                 self.wait_ready()
@@ -1548,6 +1549,10 @@ class ServoHost(base_servohost.BaseServoHost):
 
     def is_servo_topology_supported(self):
         """Check if servo_topology is supported."""
+        if self.is_containerized_servod():
+            # TODO(otabek@): revisit after stabilize container.
+            logging.info('Servod-container is not supported for now.')
+            return False
         if not self.is_up_fast():
             logging.info('Servo-Host is not reachable.')
             return False
@@ -1788,7 +1793,11 @@ def create_servo_host(dut,
         servo_args[servo_constants.SERVO_RECOVERY_MODE] = True
 
     newhost = ServoHost(**servo_args)
-    if newhost.use_icmp and not newhost.is_up_fast(count=3):
+    if newhost.is_containerized_servod():
+        # TODO(otabek@): Update for servod-manager.
+        # Servod docker is not available for access.
+        pass
+    elif newhost.use_icmp and not newhost.is_up_fast(count=3):
         # ServoHost has internal check to wait if servo-host is in reboot
         # process. If servo-host still is not available this check will stop
         # further attempts as we do not have any option to recover servo_host.
@@ -1796,7 +1805,11 @@ def create_servo_host(dut,
 
     # Reset or reboot servo device only during AdminRepair tasks.
     if try_servo_repair:
-        if newhost._is_locked:
+        if newhost.is_containerized_servod():
+            # TODO(otabek@): Update for servod-manager.
+            # Servod docker is not available for access.
+            pass
+        elif newhost._is_locked:
             # Print available servos on the host for debuging.
             newhost.print_all_servo_of_host()
             # Reset servo if the servo is locked, as we check if the servohost
@@ -1816,7 +1829,8 @@ def create_servo_host(dut,
         newhost.set_dut_host_info(dut_host_info)
     if dut_run:
         newhost.dut_run = dut_run
-    if dut_health_profile and (try_lab_servo or try_servo_repair):
+    if (not newhost.is_containerized_servod() and dut_health_profile
+                and (try_lab_servo or try_servo_repair)):
         try:
             if newhost.is_localhost():
                 logging.info('Servohost is a localhost, skip device'
