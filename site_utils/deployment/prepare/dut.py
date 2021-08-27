@@ -593,6 +593,20 @@ def setup_hwid_and_serialnumber(host):
     hwid = host.run('crossystem hwid', ignore_status=True).stdout
     serial_number = host.run('vpd -g serial_number', ignore_status=True).stdout
 
+    # Satlab is used for bring-up devices with not restriction to HWID
+    # and serial_number.
+    if not host.hostname.startswith('satlab'):
+        validate_hwid_and_serialnumber(host, hwid, serial_number)
+
+    info.attributes['HWID'] = hwid
+    info.attributes['serial_number'] = serial_number
+    if info != host.host_info_store.get():
+        host.host_info_store.commit(info)
+    logging.info("Reading HWID and SerialNumber completed successfully.")
+
+
+def validate_hwid_and_serialnumber(host, hwid, serial_number):
+    """Validate HWID and serial_number has values."""
     if not hwid and not serial_number:
         raise Exception(
                 'Failed to retrieve HWID and SerialNumber from host %s' %
@@ -602,9 +616,3 @@ def setup_hwid_and_serialnumber(host):
                         host.hostname)
     if not hwid:
         raise Exception('Failed to retrieve HWID from host %s' % host.hostname)
-
-    info.attributes['HWID'] = hwid
-    info.attributes['serial_number'] = serial_number
-    if info != host.host_info_store.get():
-        host.host_info_store.commit(info)
-    logging.info("Reading HWID and SerialNumber completed successfully.")
