@@ -721,19 +721,48 @@ class ServoHost(base_servohost.BaseServoHost):
                       servo_constants.SERVOD_TEARDOWN_TIMEOUT)
         time.sleep(servo_constants.SERVOD_TEARDOWN_TIMEOUT)
 
+    def wait_for_init_servod_in_container(self, container):
+        """Waits for servod process to be ready to listen inside container."""
+        ready_output = "Instance associated with id 9999 ready"
+        if not container:
+            logging.debug("Container object is None.")
+            return False
+        try:
+            # Executes servodtool command to wait for servod to be active.
+            exit_code, output = container.exec_run(
+                    cmd="servodtool instance wait-for-active -p 9999",
+                    stdout=True)
+            if exit_code != 0 or ready_output not in output:
+                logging.debug(
+                        'Failed to start servod process inside container,'
+                        'exit_code=%s, output=%s.', exit_code, output)
+                return False
+        except docker.errors.APIError as e:
+            logging.error('%s', e)
+        return True
+
     def start_containerized_servod(self):
         """Start the servod process on servohost."""
         logging.info("Starting servod container %s.", self.hostname)
         client = docker.from_env(timeout=300)
         try:
-            client.containers.get(self.hostname)
+            container = client.containers.get(self.hostname)
+            if container:
+                if container.status == "running":
+                    logging.info("Servod container %s already up and running.",
+                                 self.hostname)
+                    return
+                else:
+                    # This condition shouldn't happend since we are starting
+                    # container in auto_remove attribute. But if system
+                    # shutdown abruptly there might be some leftovers.
+                    logging.info(
+                            "Found Servod container %s in %s state, removing it.",
+                            self.hostname, container.status)
+                    container.remove()
         except docker.errors.NotFound:
+            logging.info("Servod container %s not found", self.hostname)
             pass
-        else:
-            logging.info("Servod container %s already up and running.",
-                         self.hostname)
-            return
-
         label = os.environ.get("LABEL", "release")
         registry = os.environ.get("REGISTRY_URI",
                                   "gcr.io/chromeos-partner-moblab")
@@ -756,7 +785,7 @@ class ServoHost(base_servohost.BaseServoHost):
             container_network = "default_satlab"
         logging.info('Servod container environment: %s', environment)
         try:
-            client.containers.run(
+            container = client.containers.run(
                     image,
                     remove=False,
                     privileged=True,
@@ -769,7 +798,9 @@ class ServoHost(base_servohost.BaseServoHost):
                     environment=environment,
                     command=["bash", "/start_servod.sh"],
             )
-            time.sleep(servo_constants.SERVOD_STARTUP_TIMEOUT)
+            # Wait for 60 sec, probing servod ready state fails.
+            if not self.wait_for_init_servod_in_container(container):
+                time.sleep(servo_constants.SERVOD_STARTUP_TIMEOUT)
             logging.info("Servod container %s up and running.", self.hostname)
         except docker.errors.ContainerError as e:
             logging.exception("Failed to start servod container. %s", e)
@@ -787,10 +818,7 @@ class ServoHost(base_servohost.BaseServoHost):
             logging.info("Servod container %s not found no need to stop it.",
                          self.hostname)
         else:
-            cont.stop()
-            logging.debug('Servod container instance stopped')
-            # TODO(otabek@): do not remove  container when perform restart.
-            cont.remove()
+            cont.remove(force=True)
             logging.debug('Servod container instance removed')
 
     def restart_servod(self, quick_startup=False):
