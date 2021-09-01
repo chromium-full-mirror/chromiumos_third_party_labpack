@@ -123,8 +123,8 @@ class RunCallTest(mox.MoxTestBase):
         dev_server.ENABLE_SSH_CONNECTION_FOR_DEVSERVER = True
         self.mox.StubOutWithMock(utils, 'get_restricted_subnet')
         utils.get_restricted_subnet(
-                self.hostname, utils.RESTRICTED_SUBNETS).AndReturn(
-                self.hostname)
+                self.hostname,
+                utils.get_all_restricted_subnets()).AndReturn(self.hostname)
 
         to_return1 = MockSshResponse(dev_server.ERR_MSG_FOR_DOWN_DEVSERVER)
         to_return2 = MockSshResponse(self.contents)
@@ -184,8 +184,8 @@ class RunCallTest(mox.MoxTestBase):
         dev_server.ENABLE_SSH_CONNECTION_FOR_DEVSERVER = True
         self.mox.StubOutWithMock(utils, 'get_restricted_subnet')
         utils.get_restricted_subnet(
-                self.hostname, utils.RESTRICTED_SUBNETS).AndReturn(
-                self.hostname)
+                self.hostname,
+                utils.get_all_restricted_subnets()).AndReturn(self.hostname)
 
         to_return = MockSshResponse(self.contents)
         utils.run(mox.StrContains(self.test_call),
@@ -201,8 +201,8 @@ class RunCallTest(mox.MoxTestBase):
         dev_server.ENABLE_SSH_CONNECTION_FOR_DEVSERVER = True
         self.mox.StubOutWithMock(utils, 'get_restricted_subnet')
         utils.get_restricted_subnet(
-                self.hostname, utils.RESTRICTED_SUBNETS).AndReturn(
-                self.hostname)
+                self.hostname,
+                utils.get_all_restricted_subnets()).AndReturn(self.hostname)
 
         to_return = MockSshResponse('\n'.join(self.contents_readline))
         utils.run(mox.StrContains(self.test_call),
@@ -219,8 +219,8 @@ class RunCallTest(mox.MoxTestBase):
         dev_server.ENABLE_SSH_CONNECTION_FOR_DEVSERVER = True
         self.mox.StubOutWithMock(utils, 'get_restricted_subnet')
         utils.get_restricted_subnet(
-                self.hostname, utils.RESTRICTED_SUBNETS).AndReturn(
-                self.hostname)
+                self.hostname,
+                utils.get_all_restricted_subnets()).AndReturn(self.hostname)
 
         to_return = MockSshResponse(self.contents)
         utils.run(mox.StrContains(self.test_call),
@@ -248,8 +248,8 @@ class RunCallTest(mox.MoxTestBase):
         dev_server.ENABLE_SSH_CONNECTION_FOR_DEVSERVER = True
         self.mox.StubOutWithMock(utils, 'get_restricted_subnet')
         utils.get_restricted_subnet(
-                self.hostname, utils.RESTRICTED_SUBNETS).AndReturn(
-                self.hostname)
+                self.hostname,
+                utils.get_all_restricted_subnets()).AndReturn(self.hostname)
 
         utils.run(mox.StrContains(self.test_call),
                   timeout=mox.IgnoreArg()).AndRaise(MockSshError())

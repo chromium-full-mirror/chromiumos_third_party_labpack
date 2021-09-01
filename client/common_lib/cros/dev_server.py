@@ -1005,7 +1005,7 @@ class ImageServerBase(DevServer):
         """
         server_name = get_hostname(call)
         is_in_restricted_subnet = utils.get_restricted_subnet(
-                server_name, utils.RESTRICTED_SUBNETS)
+                server_name, utils.get_all_restricted_subnets())
         _EMPTY_SENTINEL_VALUE = object()
         def kickoff_call():
             """Invoke a given devserver call using urllib.open or ssh.

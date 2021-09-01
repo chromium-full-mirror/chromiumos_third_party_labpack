@@ -1979,6 +1979,18 @@ def _setup_all_subnets():
 _setup_all_subnets()
 
 
+def get_all_restricted_subnets():
+    """Returns all restricted subnets in a flat list, including subnets that
+    are part of a p2p group.
+
+    This helps us to check if a host is in a restricted subnet."""
+    result = []
+    for s in ALL_SUBNETS:
+        result.extend(s)
+
+    return result
+
+
 # regex pattern for CLIENT/wireless_ssid_ config. For example, global config
 # can have following config in CLIENT section to indicate that hosts in subnet
 # 192.168.0.1/24 should use wireless ssid of `ssid_1`
