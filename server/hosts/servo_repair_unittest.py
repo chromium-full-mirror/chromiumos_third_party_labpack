@@ -63,6 +63,8 @@ SERVO_VERIFY_DAG = (
 )
 
 SERVO_REPAIR_ACTIONS = (
+        (servo_repair.KillHangingServodProcesses, "kill_servod",
+         ['servo_host_connection'], ['servod_started']),
         (servo_repair._ServoFwUpdateRepair, 'servo_fw_update',
          ['servo_host_connection'], ['servo_fw']),
         (servo_repair._DiskCleanupRepair, 'servo_disk_cleanup',

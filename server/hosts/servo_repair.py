@@ -1267,6 +1267,46 @@ class _ECRebootRepair(hosts.RepairAction):
         return 'Reboot EC'
 
 
+class KillHangingServodProcesses(hosts.RepairAction):
+    """
+    Kills hanging servod processes on labstation.
+
+    In some cases we have hanging 'servodtool' or/and 'stop servod' task which
+    block start of the servod on the host.
+    """
+
+    SERVODTOOL_STOP = 'servodtool instance stop -p %s'
+    # Commands to kill active servod fail with timeout
+    CORE_CMD = 'ps aux | grep -ie [s]ervod |grep "%s" '
+    PRINT_CMD = CORE_CMD + "| awk '{print $2}' "
+    KILL_CMD = PRINT_CMD + "| xargs kill -9 "
+
+    @timeout_util.TimeoutDecorator(cros_constants.REPAIR_TIMEOUT_SEC)
+    def repair(self, host):
+        r = host.run(self.SERVODTOOL_STOP % host.servo_port,
+                     timeout=30,
+                     ignore_status=True)
+        logging.debug("Stop servodtool: %s", r)
+        r = host.run(self.KILL_CMD % host.servo_serial,
+                     timeout=30,
+                     ignore_status=True)
+        logging.debug("Kill servod processes: %s", r)
+
+    def _is_applicable(self, host):
+        if host.is_containerized_servod():
+            # TODO(otabek@): revisit after stabilize container.
+            logging.info('Servod is running within a container.')
+            return False
+        if not host.servo_serial:
+            logging.info('servo_serial is not presented.')
+            return False
+        return host.is_labstation()
+
+    @property
+    def description(self):
+        return 'Kill tail servodtool processes'
+
+
 class _CR50FwReflashRepair(hosts.RepairAction):
     """
     Reflash CR50 firmware and reboot AP from DUT side to wake it up.
@@ -1572,6 +1612,8 @@ def _servo_repair_actions():
             'servo_power_delivery'
     ]
     return (
+            (KillHangingServodProcesses, "kill_servod",
+             ['servo_host_connection'], ['servod_started']),
             (_ServoFwUpdateRepair, 'servo_fw_update',
              ['servo_host_connection'], ['servo_fw']),
             (_DiskCleanupRepair, 'servo_disk_cleanup',
