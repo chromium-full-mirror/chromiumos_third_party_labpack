@@ -1010,29 +1010,41 @@ class _LidVerifier(hosts.Verifier):
         return 'lid_open control is normal'
 
 
-class _EcBoardVerifier(hosts.Verifier):
+class ECConsoleVerifier(hosts.Verifier):
     """
-    Verifier response from the 'ec_board' control.
+    Verifier response from the EC console.
     """
 
+    COMMAND_TO_CHECK_CONSOLE = (
+            'ec_system_powerstate',
+            'ec_board',
+    )
+
     @ignore_exception_for_non_cros_host
-    @timeout_util.TimeoutDecorator(cros_constants.SHORT_VERIFY_TIMEOUT_SEC)
+    @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
     def verify(self, host):
-        if host.is_ec_supported():
-            ec_board_name = ''
-            try:
-                ec_board_name = host.get_servo().get_ec_board()
-                logging.debug('EC board: %s', ec_board_name)
-            except Exception as e:
-                raise hosts.AutoservNonCriticalVerifyError(
-                        '`ec_board` control is not responding; '
-                        'may be caused of broken EC firmware')
-        else:
+        if not host.is_ec_supported():
             logging.info('The board not support EC')
+
+        for command in self.COMMAND_TO_CHECK_CONSOLE:
+            if host.get_servo().has_control(command):
+                try:
+                    # Response of command is not important.
+                    r = host.get_servo().get(command)
+                    logging.debug('Result %s:%s', command, r)
+                    # Exiting as we confirmed that console is working.
+                    return
+                except Exception as e:
+                    logging.error('Fail to read %s control. Error: %s',
+                                  command, e)
+        # If we reached this point then no command succeded.
+        raise hosts.AutoservNonCriticalVerifyError(
+                'EC console is not responding; '
+                'may be caused of broken EC firmware')
 
     @property
     def description(self):
-        return 'Check EC by get `ec_board` control'
+        return 'Check EC console'
 
 
 class _ConnectionVerifier(repair_utils.SshVerifier):
@@ -1581,7 +1593,7 @@ def _servo_verifier_actions():
                                                         ]),
             (_BatteryVerifier, 'servo_battery', ['servo_hub_connected']),
             (_LidVerifier, 'servo_lid_open', ['servo_hub_connected']),
-            (_EcBoardVerifier, 'servo_ec_board', ['servo_dut_connected']),
+            (ECConsoleVerifier, 'servo_ec_console', ['servo_dut_connected']),
             (_Cr50ConsoleVerifier, 'servo_cr50_console',
              ['servo_dut_connected']),
             (_CCDTestlabVerifier, 'servo_ccd_testlab', ['servo_cr50_console']),
@@ -1602,7 +1614,7 @@ def _servo_repair_actions():
             'servo_cr50_low_sbu', 'servo_cr50_off', 'servo_power_delivery'
     ]
     dut_triggers = [
-            'servod_control', 'servo_lid_open', 'servo_ec_board',
+            'servod_control', 'servo_lid_open', 'servo_ec_console',
             'servo_topology', 'servo_dut_connected', 'servo_hub_connected',
             'servo_cr50_low_sbu', 'servo_cr50_off', 'servo_cr50_console',
             'servo_power_delivery'

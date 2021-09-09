@@ -1476,7 +1476,7 @@ class ServoHost(base_servohost.BaseServoHost):
         hub_connected = self.get_verifier_state('servo_hub_connected')
         pwr_button = self.get_verifier_state('servo_pwr_button')
         lid_open = self.get_verifier_state('servo_lid_open')
-        ec_board = self.get_verifier_state('servo_ec_board')
+        ec_board = self.get_verifier_state('servo_ec_console')
         cr50_console = self.get_verifier_state('servo_cr50_console')
         ccd_testlab = self.get_verifier_state('servo_ccd_testlab')
 
