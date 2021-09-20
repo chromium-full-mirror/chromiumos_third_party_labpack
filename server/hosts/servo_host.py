@@ -23,6 +23,7 @@ import json
 import tempfile
 import time
 import six
+import string
 import six.moves.xmlrpc_client
 import socket
 
@@ -945,6 +946,49 @@ class ServoHost(base_servohost.BaseServoHost):
         self.smart_usbhub = True
         return True
 
+    def _reset_usbkey_authorized(self):
+        """Reset usb-key detected under labstation.
+
+        This is work around to adress issue found for servo_v4p1.
+        TODO(197647872): Remove as soon issue will be addressed.
+        """
+        if (not self.servo_serial
+                    or not self.servo_serial.startswith('SERVOV4P1')):
+            logging.debug('Autotrized flag reset only for servo_v4p1.')
+            return
+        usb_path = self.get_main_servo_usb_path()
+        if not usb_path:
+            logging.debug('Failed to reset usb-key authorized flag.')
+            return
+        path_dir = os.path.dirname(usb_path)
+        path_tail = os.path.basename(usb_path)
+        # For usb-path path looks like '/sys/bus/usb/devices/1-4.2.5' we need
+        # remove last number, to make it as path to the servo-hub.
+        path_tail = string.join(path_tail.split('.')[:-1], '.')
+        # Replace the first number '1' to '2 (usb3). Finally it will look like
+        # '/sys/bus/usb/devices/2-4.2'
+        path_tail = path_tail.replace('1-', '2-', 1)
+        authorized_path = os.path.join(path_dir, path_tail, 'authorized')
+        logging.info("Authorized flag file path: %s", authorized_path)
+        try:
+            self.run('echo 0 > %s' % authorized_path,
+                     ignore_status=True,
+                     timeout=30)
+            # Giving timeout to apply change.
+            time.sleep(1)
+            self.run('echo 1 > %s' % authorized_path,
+                     ignore_status=True,
+                     timeout=30)
+            # Giving timeout to apply change.
+            time.sleep(1)
+            logging.info('Attempt to reset `authorized` successed')
+        except Exception as e:
+            # Here we catch only timeout errors.
+            # Other errors is filtered by ignore_status=True
+            logging.debug(
+                    'Attempt to reset `authorized` flag for servo-hub'
+                    ' failed due to timeout; %s', e)
+
     def reset_servo(self):
         """Reset(power-cycle) the servo via smart usbhub.
         """
@@ -962,7 +1006,8 @@ class ServoHost(base_servohost.BaseServoHost):
             logging.warning(message)
             self.record('INFO', None, None, message)
             return
-
+        # Reset authorized flag fror servo-hub.
+        self._reset_usbkey_authorized()
         post_reset_devnum = self._get_servo_usb_devnum()
         logging.info('Servo usb devnum after reset: %s', post_reset_devnum)
         if not (pre_reset_devnum and post_reset_devnum):
