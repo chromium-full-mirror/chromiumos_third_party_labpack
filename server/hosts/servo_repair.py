@@ -1024,7 +1024,8 @@ class ECConsoleVerifier(hosts.Verifier):
     @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
     def verify(self, host):
         if not host.is_ec_supported():
-            logging.info('The board not support EC')
+            logging.info('The board does not support EC')
+            return
 
         for command in self.COMMAND_TO_CHECK_CONSOLE:
             if host.get_servo().has_control(command):
