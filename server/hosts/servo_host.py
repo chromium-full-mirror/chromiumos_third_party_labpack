@@ -29,6 +29,7 @@ import socket
 
 try:
     import docker
+    from autotest_lib.site_utils.docker import utils as docker_utils
 except ImportError:
     logging.info("Docker API is not installed in this environment")
 
@@ -52,6 +53,8 @@ except ImportError:
     metrics = utils.metrics_mock
 
 _CONFIG = global_config.global_config
+
+SERVOD_CONTAINER_IMAGE_PATH = "us-docker.pkg.dev/chromeos-partner-moblab/common-core"
 
 
 class ServoHost(base_servohost.BaseServoHost):
@@ -648,8 +651,7 @@ class ServoHost(base_servohost.BaseServoHost):
             return
 
         if self.is_containerized_servod():
-            self.start_containerized_servod()
-            return
+            return self.start_containerized_servod()
 
         cmd = 'start servod'
         if self.servo_board:
@@ -746,28 +748,22 @@ class ServoHost(base_servohost.BaseServoHost):
     def start_containerized_servod(self):
         """Start the servod process on servohost."""
         logging.info("Starting servod container %s.", self.hostname)
-        client = docker.from_env(timeout=300)
+        client = docker_utils.get_docker_client()
         try:
-            container = client.containers.get(self.hostname)
-            if container:
-                if container.status == "running":
-                    logging.info("Servod container %s already up and running.",
-                                 self.hostname)
-                    return
-                else:
-                    # This condition shouldn't happend since we are starting
-                    # container in auto_remove attribute. But if system
-                    # shutdown abruptly there might be some leftovers.
-                    logging.info(
-                            "Found Servod container %s in %s state, removing it.",
-                            self.hostname, container.status)
-                    container.remove()
+            if self.is_up():
+                logging.warning("Container already exists - not starting")
+                return
+            self.stop_servod()
         except docker.errors.NotFound:
             logging.info("Servod container %s not found", self.hostname)
             pass
-        label = os.environ.get("LABEL", "release")
-        registry = os.environ.get("REGISTRY_URI",
-                                  "gcr.io/chromeos-partner-moblab")
+        except docker.errors.APIError:
+            # Container exists but is not running
+            logging.info("Cleanup of non functional container.")
+            self.stop_servod()
+
+        label = os.environ.get("SERVOD_CONTAINER_LABEL", "release")
+        registry = os.environ.get("REGISTRY_URI", SERVOD_CONTAINER_IMAGE_PATH)
         image = "%s/servod:%s" % (registry, label)
         logging.info("Servod container image: %s", image)
 
@@ -783,7 +779,7 @@ class ServoHost(base_servohost.BaseServoHost):
                 "PORT=%s" % self.servo_port,
         ]
         container_network = "default_moblab"
-        if socket.gethostname().startswith('satlab'):
+        if 'drone' in docker_utils.get_running_containers(client=client):
             container_network = "default_satlab"
         logging.info('Servod container environment: %s', environment)
         try:
@@ -796,7 +792,11 @@ class ServoHost(base_servohost.BaseServoHost):
                     network=container_network,
                     cap_add=["NET_ADMIN"],
                     detach=True,
-                    volumes=["/dev:/dev"],
+                    volumes=[
+                            "/dev:/dev",
+                            "%s_log:/var/log/servod_%s/" %
+                            (self.hostname, self.servo_port)
+                    ],
                     environment=environment,
                     command=["bash", "/start_servod.sh"],
             )
@@ -813,12 +813,16 @@ class ServoHost(base_servohost.BaseServoHost):
     def stop_containerized_servod(self):
         """Stop the container running servod."""
         logging.info("Stopping servod container %s.", self.hostname)
-        client = docker.from_env(timeout=300)
+        client = docker_utils.get_docker_client()
         try:
             cont = client.containers.get(self.hostname)
         except docker.errors.NotFound:
             logging.info("Servod container %s not found no need to stop it.",
                          self.hostname)
+        except docker.errors.APIError:
+            logging.exception(
+                    "Stopping servod container %s caused a docker error.",
+                    self.hostname)
         else:
             cont.remove(force=True)
             logging.debug('Servod container instance removed')
@@ -1271,7 +1275,7 @@ class ServoHost(base_servohost.BaseServoHost):
         files = res.stdout.strip().split()
         try:
             if self.is_containerized_servod():
-                client = docker.from_env(timeout=300)
+                client = docker_utils.get_docker_client()
                 container = client.containers.get(self.hostname)
                 file_stream, stat = container.get_archive(files)
                 tf = tempfile.NamedTemporaryFile(delete=False)

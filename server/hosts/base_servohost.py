@@ -19,6 +19,7 @@ import os
 
 try:
     import docker
+    from autotest_lib.site_utils.docker import utils as docker_utils
 except ImportError:
     logging.info("Docker API is not installed in this environment")
 
@@ -596,9 +597,18 @@ class BaseServoHost(ssh_host.SSHHost):
                                              e.result_obj)
         elif self.is_containerized_servod():
             logging.info("Trying to run the command %s", command)
-            client = docker.from_env(timeout=300)
+            client = docker_utils.get_docker_client()
             container = client.containers.get(self.hostname)
-            (exit_code, output) = container.exec_run("bash -c '%s'" % command)
+            try:
+                (exit_code,
+                 output) = container.exec_run("bash -c '%s'" % command)
+            except docker.errors.APIError:
+                logging.exception("Failed to run command %s", command)
+                for line in container.logs().split(b'\n'):
+                    logging.error(line)
+                return utils.CmdResult(command=command,
+                                       stdout="",
+                                       exit_status=-1)
             return utils.CmdResult(command=command,
                                    stdout=output,
                                    exit_status=exit_code)
@@ -667,9 +677,13 @@ class BaseServoHost(ssh_host.SSHHost):
                  False otherwise.
         """
         if self.is_containerized_servod():
-            client = docker.from_env(timeout=300)
+            client = docker_utils.get_docker_client()
             try:
-                client.containers.get(self.hostname)
+                (exit_code,
+                 output) = client.containers.get(self.hostname).exec_run("ps")
+                logging.info("Is Up output %s", output)
+                if b"servod" not in output:
+                    return False
             except docker.errors.NotFound:
                 return False
             return True
