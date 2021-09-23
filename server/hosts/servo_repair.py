@@ -1048,6 +1048,31 @@ class ECConsoleVerifier(hosts.Verifier):
         return 'Check EC console'
 
 
+class ServodDutControllerMissingVerifier(hosts.Verifier):
+    """Verifier to check whether the servod dut controller is missing or not.
+
+    When servod is initializing, it checks if DUT controller is
+    missing. If yes,then it sets 'dut_controller_missing_fault' to
+    'on', otherwise, to 'off'. Missing controller means servo
+    component connected to the DUT is missing, or is not responsive.
+    """
+
+    @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
+    def verify(self, host):
+        if host.get_servo().get('dut_controller_missing_fault') == 'on':
+            raise hosts.AutoservVerifyError('Servod is missing dut controller')
+
+    def _is_applicable(self, host):
+        if not host.is_labstation():
+            logging.info('Not supported for servo_v3.')
+            return False
+        return host.is_in_lab()
+
+    @property
+    def description(self):
+        return 'ensure servod does not have missing dut controller'
+
+
 class _ConnectionVerifier(repair_utils.SshVerifier):
     """
     Ensure the servo host container is up.
@@ -1584,6 +1609,8 @@ def _servo_verifier_actions():
             (_TopologyVerifier, 'servo_topology', ['servod_echo']),
             (_ServodConnectionVerifier, 'servod_connection', ['servod_echo']),
             (_Cr50LowSBUVerifier, 'servo_cr50_low_sbu', ['servod_connection']),
+            (ServodDutControllerMissingVerifier,
+             'servod_dut_controller_missing', ['servod_connection']),
             (_Cr50OffVerifier, 'servo_cr50_off', ['servod_connection']),
             (_ServodControlVerifier, 'servod_control', ['servod_connection']),
             (_DUTConnectionVerifier, 'servo_dut_connected',
@@ -1612,13 +1639,14 @@ def _servo_repair_actions():
             'servod_started', 'servo_topology', 'servod_connection',
             'servod_echo', 'servod_control', 'servo_dut_connected',
             'servo_hub_connected', 'servo_pwr_button', 'servo_cr50_console',
-            'servo_cr50_low_sbu', 'servo_cr50_off', 'servo_power_delivery'
+            'servo_cr50_low_sbu', 'servo_cr50_off', 'servo_power_delivery',
+            'servod_dut_controller_missing'
     ]
     dut_triggers = [
             'servod_control', 'servo_lid_open', 'servo_ec_console',
             'servo_topology', 'servo_dut_connected', 'servo_hub_connected',
             'servo_cr50_low_sbu', 'servo_cr50_off', 'servo_cr50_console',
-            'servo_power_delivery'
+            'servo_power_delivery', 'servod_dut_controller_missing'
     ]
     reboot_triggers = [
             'servo_topology', 'servo_root_present', 'servo_disk_space',

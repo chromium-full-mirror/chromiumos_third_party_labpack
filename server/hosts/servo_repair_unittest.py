@@ -39,6 +39,8 @@ SERVO_VERIFY_DAG = (
          ['servod_echo']),
         (servo_repair._Cr50LowSBUVerifier, 'servo_cr50_low_sbu',
          ['servod_connection']),
+        (servo_repair.ServodDutControllerMissingVerifier,
+         'servod_dut_controller_missing', ['servod_connection']),
         (servo_repair._Cr50OffVerifier, 'servo_cr50_off',
          ['servod_connection']),
         (servo_repair._ServodControlVerifier, 'servod_control',
@@ -78,7 +80,7 @@ SERVO_REPAIR_ACTIONS = (
                  'servod_echo', 'servod_control', 'servo_dut_connected',
                  'servo_hub_connected', 'servo_pwr_button',
                  'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
-                 'servo_power_delivery'
+                 'servo_power_delivery', 'servod_dut_controller_missing'
          ]),
         (servo_repair._ServoRebootRepair, 'servo_reboot',
          ['servo_host_connection'], [
@@ -91,7 +93,7 @@ SERVO_REPAIR_ACTIONS = (
                  'servod_echo', 'servod_control', 'servo_dut_connected',
                  'servo_hub_connected', 'servo_pwr_button',
                  'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
-                 'servo_power_delivery'
+                 'servo_power_delivery', 'servod_dut_controller_missing'
          ]),
         (servo_repair._FakedisconnectRepair, 'servo_fakedisconnect',
          ['servod_connection'], [
@@ -99,42 +101,46 @@ SERVO_REPAIR_ACTIONS = (
                  'servod_echo', 'servod_control', 'servo_dut_connected',
                  'servo_hub_connected', 'servo_pwr_button',
                  'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
-                 'servo_power_delivery'
+                 'servo_power_delivery', 'servod_dut_controller_missing'
          ]),
         (servo_repair._ToggleCCLineRepair, 'servo_cc', ['servod_connection'], [
                 'servod_started', 'servo_topology', 'servod_connection',
                 'servod_echo', 'servod_control', 'servo_dut_connected',
                 'servo_hub_connected', 'servo_pwr_button',
                 'servo_cr50_console', 'servo_cr50_low_sbu', 'servo_cr50_off',
-                'servo_power_delivery'
+                'servo_power_delivery', 'servod_dut_controller_missing'
         ]),
         (servo_repair._DutRebootRepair, 'servo_dut_reboot',
          ['servod_connection'], [
                  'servod_control', 'servo_lid_open', 'servo_ec_console',
                  'servo_topology', 'servo_dut_connected',
                  'servo_hub_connected', 'servo_cr50_low_sbu', 'servo_cr50_off',
-                 'servo_cr50_console', 'servo_power_delivery'
+                 'servo_cr50_console', 'servo_power_delivery',
+                 'servod_dut_controller_missing'
          ]),
         (servo_repair._ECRebootRepair, 'servo_ec_reboot',
          ['servod_connection'], [
                  'servod_control', 'servo_lid_open', 'servo_ec_console',
                  'servo_topology', 'servo_dut_connected',
                  'servo_hub_connected', 'servo_cr50_low_sbu', 'servo_cr50_off',
-                 'servo_cr50_console', 'servo_power_delivery'
+                 'servo_cr50_console', 'servo_power_delivery',
+                 'servod_dut_controller_missing'
          ]),
         (servo_repair._CR50FwReflashRepair, 'servo_cr50_fw_reflash',
          ['servod_connection'], [
                  'servod_control', 'servo_lid_open', 'servo_ec_console',
                  'servo_topology', 'servo_dut_connected',
                  'servo_hub_connected', 'servo_cr50_low_sbu', 'servo_cr50_off',
-                 'servo_cr50_console', 'servo_power_delivery'
+                 'servo_cr50_console', 'servo_power_delivery',
+                 'servod_dut_controller_missing'
          ]),
         (servo_repair._ResetECFromDUTSideRepair, 'servo_dut_ec_reset',
          ['servod_connection'], [
                  'servod_control', 'servo_lid_open', 'servo_ec_console',
                  'servo_topology', 'servo_dut_connected',
                  'servo_hub_connected', 'servo_cr50_low_sbu', 'servo_cr50_off',
-                 'servo_cr50_console', 'servo_power_delivery'
+                 'servo_cr50_console', 'servo_power_delivery',
+                 'servod_dut_controller_missing'
          ]),
 )
 

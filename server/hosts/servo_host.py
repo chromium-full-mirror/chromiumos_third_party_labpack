@@ -1512,6 +1512,8 @@ class ServoHost(base_servohost.BaseServoHost):
         servo_v3_present = self.get_verifier_state('servo_v3_root_present')
         servo_fw = self.get_verifier_state('servo_fw')
         servo_fw_update = self.get_repair_strategy_node('servo_fw_update')
+        servod_dut_controller_missing = self.get_repair_strategy_node(
+                'servod_dut_controller_missing')
         disk_space = self.get_verifier_state('servo_disk_space')
         start_servod = self.get_verifier_state('start_servod')
         servod_started = self.get_verifier_state('servod_started')
@@ -1559,6 +1561,8 @@ class ServoHost(base_servohost.BaseServoHost):
         if cr50_off == hosts.VERIFY_FAILED:
             return servo_constants.SERVO_STATE_CR50_NOT_ENUMERATED
 
+        if servod_dut_controller_missing == hosts.VERIFY_FAILED:
+            return servo_constants.SERVO_STATE_SERVOD_DUT_CONTROLLER_MISSING
         if servo_topology == hosts.VERIFY_FAILED:
             return servo_constants.SERVO_STATE_TOPOLOGY_ISSUE
 
