@@ -56,6 +56,12 @@ _CONFIG = global_config.global_config
 
 SERVOD_CONTAINER_IMAGE_PATH = "us-docker.pkg.dev/chromeos-partner-moblab/common-core"
 
+# Create the flag on drone or inside the ssp container to enable servod debug mode.
+# The servod container will not be deleted after being stopped.
+SERVOD_DEBUG_FLAG = '/servod_debug'
+
+DOCKER_SERVOD_DEBUG_MODE = os.environ.get('DOCKER_SERVOD_DEBUG_MODE', '0')
+
 
 class ServoHost(base_servohost.BaseServoHost):
     """Host class for a servo host(e.g. beaglebone, labstation)
@@ -715,7 +721,11 @@ class ServoHost(base_servohost.BaseServoHost):
             return
 
         if self.is_containerized_servod():
-            self.stop_containerized_servod()
+            remove_container = True
+            if DOCKER_SERVOD_DEBUG_MODE == '1' or os.path.exists(
+                    SERVOD_DEBUG_FLAG):
+                remove_container = False
+            self.stop_containerized_servod(remove_container=remove_container)
             return
 
         logging.debug('Stopping servod on port %s', self.servo_port)
@@ -753,14 +763,14 @@ class ServoHost(base_servohost.BaseServoHost):
             if self.is_up():
                 logging.warning("Container already exists - not starting")
                 return
-            self.stop_servod()
+            self.stop_containerized_servod()
         except docker.errors.NotFound:
             logging.info("Servod container %s not found", self.hostname)
             pass
         except docker.errors.APIError:
             # Container exists but is not running
             logging.info("Cleanup of non functional container.")
-            self.stop_servod()
+            self.stop_containerized_servod()
 
         label = os.environ.get("SERVOD_CONTAINER_LABEL", "release")
         registry = os.environ.get("REGISTRY_URI", SERVOD_CONTAINER_IMAGE_PATH)
@@ -810,7 +820,7 @@ class ServoHost(base_servohost.BaseServoHost):
         except docker.errors.ImageNotFound:
             logging.exception("Servod container image %s not found.", image)
 
-    def stop_containerized_servod(self):
+    def stop_containerized_servod(self, remove_container=True):
         """Stop the container running servod."""
         logging.info("Stopping servod container %s.", self.hostname)
         client = docker_utils.get_docker_client()
@@ -824,8 +834,9 @@ class ServoHost(base_servohost.BaseServoHost):
                     "Stopping servod container %s caused a docker error.",
                     self.hostname)
         else:
-            cont.remove(force=True)
-            logging.debug('Servod container instance removed')
+            if remove_container == True:
+                cont.remove(force=True)
+                logging.debug('Servod container instance removed')
 
     def restart_servod(self, quick_startup=False):
         """Restart the servod process on servohost.
