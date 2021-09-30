@@ -788,6 +788,16 @@ class ServoHost(base_servohost.BaseServoHost):
                 "SERIAL=%s" % self.servo_serial,
                 "PORT=%s" % self.servo_port,
         ]
+
+        # Start servod with dual_v4 based on servo_setup.
+        if self.is_dual_setup():
+            environment.append("DUAL_V4=1")
+        # Start servod with CONFIG=cr50.xml which required for some pools.
+        if self._require_cr50_servod_config():
+            environment.append("CONFIG=cr50.xml")
+        if self.servo_recovery == True:
+            environment.append("REC_MODE=1")
+
         container_network = "default_moblab"
         if 'drone' in docker_utils.get_running_containers(client=client):
             container_network = "default_satlab"
