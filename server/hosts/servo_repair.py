@@ -1063,7 +1063,7 @@ class ServodDutControllerMissingVerifier(hosts.Verifier):
             raise hosts.AutoservVerifyError('Servod is missing dut controller')
 
     def _is_applicable(self, host):
-        if not host.is_labstation():
+        if not (host.is_labstation() or host.is_containerized_servod()):
             logging.info('Not supported for servo_v3.')
             return False
         return host.is_in_lab()
