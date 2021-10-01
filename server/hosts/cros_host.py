@@ -394,14 +394,19 @@ class CrosHost(abstract_ssh.AbstractSSHHost):
             self.health_profile = dut_health_profile
         self.set_servo_host(_servo_host, servo_state)
 
-        # TODO(waihong): Do the simplication on Chameleon too.
-        self._chameleon_host = chameleon_host.create_chameleon_host(
-            dut=self.hostname,
-            chameleon_args=chameleon_args)
-        if self._chameleon_host:
-            self.chameleon = self._chameleon_host.create_chameleon_board()
-        else:
-            self.chameleon = None
+        self._chameleon_host = None
+        self.chameleon = None
+        # Applied try/except to avoid noice from checks. (b/201714855)
+        # The issue will be targeted by b/201715132.
+        try:
+            # TODO(waihong): Do the simplication on Chameleon too.
+            self._chameleon_host = chameleon_host.create_chameleon_host(
+                    dut=self.hostname, chameleon_args=chameleon_args)
+            if self._chameleon_host:
+                self.chameleon = self._chameleon_host.create_chameleon_board()
+        except Exception as e:
+            logging.error('Exception %s in initialize chameleon', e)
+
 
         # Bluetooth peers will be populated by the test if needed
         self._btpeer_host_list = []
