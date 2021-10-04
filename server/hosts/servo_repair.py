@@ -91,12 +91,8 @@ class _UpdateVerifier(hosts.Verifier):
                         sys.exc_info()[2])
 
     def _is_applicable(self, host):
-        if host.is_containerized_servod():
-            # TODO(otabek@): revisit after stabilize container.
-            logging.info('Servod is running within a container.')
-            return False
         # Run only for servo_v3 host.
-        if host.is_labstation():
+        if host.is_labstation() or host.is_containerized_servod():
             return False
         # Only run if the host is in the physical lab.
         return host.is_in_lab()
@@ -126,12 +122,6 @@ class _StartServodVerifier(hosts.Verifier):
     def description(self):
         return 'Initial servod start'
 
-    def _is_applicable(self, host):
-        if host.is_containerized_servod():
-            # Servod started on container by default.
-            return False
-        return True
-
 
 class _RootServoPresentVerifier(hosts.Verifier):
     """Verifier that first servo is present."""
@@ -144,11 +134,17 @@ class _RootServoPresentVerifier(hosts.Verifier):
         try:
             device = topology.get_root_servo()
         except Exception as e:
-            host.request_reboot()
-            logging.info('Reboot labstation requested, it will be handled'
-                         ' by labstation AdminRepair task.'
-                         ' Unable to detect root servo info from topology.')
-            logging.debug('(Not critical) %s', e)
+            if host.is_containerized_servod():
+                host.restart_servod()
+                logging.debug('Restarting servod container (Not critical) %s',
+                              e)
+            else:
+                host.request_reboot()
+                logging.info(
+                        'Reboot labstation requested, it will be handled'
+                        ' by labstation AdminRepair task.'
+                        ' Unable to detect root servo info from topology.')
+                logging.debug('(Not critical) %s', e)
         if device:
             logging.info('Root servo is present')
             return
@@ -164,12 +160,8 @@ class _RootServoPresentVerifier(hosts.Verifier):
         raise hosts.AutoservVerifyError('Root servo not found!')
 
     def _is_applicable(self, host):
-        if host.is_containerized_servod():
-            # TODO(otabek@): revisit after stabilize container.
-            logging.info('Servod is running within a container.')
-            return False
         # Run only for servos under labstations.
-        if not host.is_labstation():
+        if not (host.is_labstation() or host.is_containerized_servod()):
             return False
         # Only run if the host is in the physical lab.
         return host.is_in_lab()
@@ -229,12 +221,8 @@ class _ServoFwVerifier(hosts.Verifier):
             )
 
     def _is_applicable(self, host):
-        if host.is_containerized_servod():
-            # TODO(otabek@): revisit after stabilize container.
-            logging.info('Servod is running within a container.')
-            return False
         # Run only for servos under labstations.
-        if not host.is_labstation():
+        if not (host.is_labstation() or host.is_containerized_servod()):
             return False
         # Only run if the host is in the physical lab.
         return host.is_in_lab()
@@ -439,12 +427,6 @@ class _ServodEchoVerifier(hosts.Verifier):
     @property
     def description(self):
         return 'Servod is running and responsive to dut-control run.'
-
-    def _is_applicable(self, host):
-        if host.is_containerized_servod():
-            logging.info('Servod is running within a container.')
-            return False
-        return True
 
 
 class _DiskSpaceVerifier(hosts.Verifier):
@@ -1105,12 +1087,6 @@ class _RestartServod(hosts.RepairAction):
     def description(self):
         return 'Start servod with the proper config settings.'
 
-    def _is_applicable(self, host):
-        if host.is_containerized_servod():
-            logging.info('Servod is running within a container.')
-            return False
-        return True
-
 
 class _ServoRebootRepair(repair_utils.RebootRepair):
     """Try repair servo by reboot servohost.
@@ -1331,14 +1307,10 @@ class KillHangingServodProcesses(hosts.RepairAction):
         logging.debug("Kill servod processes: %s", r)
 
     def _is_applicable(self, host):
-        if host.is_containerized_servod():
-            # TODO(otabek@): revisit after stabilize container.
-            logging.info('Servod is running within a container.')
-            return False
         if not host.servo_serial:
             logging.info('servo_serial is not presented.')
             return False
-        return host.is_labstation()
+        return host.is_labstation() or host.is_containerized_servod()
 
     @property
     def description(self):
