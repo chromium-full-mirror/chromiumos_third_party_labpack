@@ -87,6 +87,11 @@ SERVO_REPAIR_ACTIONS = (
                  'servo_topology', 'servo_root_present', 'servo_disk_space',
                  'servo_power_delivery'
          ]),
+        (servo_repair._PowerCycleRepair, 'servo_pd_cycle',
+         ['servod_connection'], [
+                 'servo_topology', 'servo_cr50_low_sbu', 'servo_cr50_off',
+                 'servo_cr50_console'
+         ]),
         (servo_repair._PowerDeliveryRepair, 'servo_pd_recover',
          ['servod_connection'], [
                  'servod_started', 'servo_topology', 'servod_connection',

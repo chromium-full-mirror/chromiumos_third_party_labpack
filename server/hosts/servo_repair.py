@@ -567,13 +567,13 @@ class _CCDTestlabVerifier(hosts.Verifier):
         return 'ccd testlab enabled'
 
 class _CCDPowerDeliveryVerifier(hosts.Verifier):
-    """Verifier to check and reset servo_v4_role for servos that support
+    """Verifier to check and reset servo_pd_role for servos that support
     power delivery feature(a.k.a power pass through).
 
-    There are currently two position of servo_v4_role, src and snk:
+    There are currently two position of servo_pd_role, src and snk:
     src --  servo in power delivery mode and passes power to the DUT.
     snk --  servo in normal mode and not passes power to DUT.
-    We want to ensure that servo_v4_role is set to src.
+    We want to ensure that servo_pd_role is set to src.
     """
     @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
     def verify(self, host):
@@ -1220,10 +1220,10 @@ class _FakedisconnectRepair(hosts.RepairAction):
 
 
 class _PowerDeliveryRepair(hosts.RepairAction):
-    """Repair to check servo_v4_role for servos that support
+    """Repair to check servo_pd_role for servos that support
     power delivery feature(a.k.a power pass through).
 
-    There are currently two position of servo_v4_role, src and snk:
+    There are currently two position of servo_pd_role, src and snk:
     src --  servo in power delivery mode and passes power to the DUT.
     snk --  servo in normal mode and not passes power to DUT.
     """
@@ -1236,7 +1236,7 @@ class _PowerDeliveryRepair(hosts.RepairAction):
         host.get_servo().set_nocheck('servo_pd_role', 'snk')
         time.sleep(1)
         for x in range(self._SET_ATTEMPT_COUNT):
-            logging.debug('Try set servo_v4_role to src.'
+            logging.debug('Try set servo_pd_role to src.'
                           ' Attempt: %s', x + 1)
             try:
                 host.get_servo().set('servo_pd_role', 'src')
@@ -1262,6 +1262,36 @@ class _PowerDeliveryRepair(hosts.RepairAction):
     @property
     def description(self):
         return 'Recover power delivery on servo'
+
+
+class _PowerCycleRepair(hosts.RepairAction):
+    """Repair to toggle servo_pd_role for servos that support
+    power delivery feature(a.k.a power pass through).
+
+    There are currently two position of servo_pd_role, src and snk:
+    src --  servo in power delivery mode and passes power to the DUT.
+    snk --  servo in normal mode and not passes power to DUT.
+    """
+    # How long waitbefore restore the power.
+    _WAIT_TIMEOUT = 35
+
+    @timeout_util.TimeoutDecorator(cros_constants.REPAIR_TIMEOUT_SEC)
+    def repair(self, host):
+        host.get_servo().set('servo_pd_role', 'snk')
+        time.sleep(self._WAIT_TIMEOUT)
+        host.get_servo().set('servo_pd_role', 'src')
+        # Restart servod to re-initialize servos.
+        # In some cases if device did not receive power can block detection
+        # of servo components.
+        host.restart_servod()
+
+    def _is_type_c(self, host):
+        return (host.is_in_lab() and host.get_servo()
+                and host.get_servo().supports_built_in_pd_control())
+
+    @property
+    def description(self):
+        return 'Recover ccd_cr50 by power-cycle by PD'
 
 
 class _ECRebootRepair(hosts.RepairAction):
@@ -1624,6 +1654,10 @@ def _servo_repair_actions():
             'servo_topology', 'servo_root_present', 'servo_disk_space',
             'servo_power_delivery'
     ]
+    pd_cycle_triggers = [
+            'servo_topology', 'servo_cr50_low_sbu', 'servo_cr50_off',
+            'servo_cr50_console'
+    ]
     return (
             (KillHangingServodProcesses, "kill_servod",
              ['servo_host_connection'], ['servod_started']),
@@ -1638,6 +1672,8 @@ def _servo_repair_actions():
              ['servo_host_connection', 'servo_fw'], config + base_triggers),
             (_ServoRebootRepair, 'servo_reboot', ['servo_host_connection'],
              reboot_triggers),
+            (_PowerCycleRepair, 'servo_pd_cycle', ['servod_connection'],
+             pd_cycle_triggers),
             (_PowerDeliveryRepair, 'servo_pd_recover', ['servod_connection'],
              base_triggers),
             (_FakedisconnectRepair, 'servo_fakedisconnect',
