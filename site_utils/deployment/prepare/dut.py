@@ -417,7 +417,7 @@ def install_test_image(host):
     else:
         raise Exception('DUT failed to boot from USB for install test image.')
 
-    host.run('chromeos-install --yes', timeout=host.ADMIN_INSTALL_TIMEOUT)
+    host.run('chromeos-install --yes', timeout=host.ADMIN_INSTALL_TIMEOUT * 2)
 
     logging.info("Rebooting DUT to boot from hard drive.")
     try:
