@@ -42,6 +42,9 @@ class MockHost(object):
     def is_file_exists(self, file_path):
         return False
 
+    def is_containerized_servod(self):
+        return False
+
 
 def create_device_health_profile():
     servohost = MockHost('dummy_servohost_hostname')
