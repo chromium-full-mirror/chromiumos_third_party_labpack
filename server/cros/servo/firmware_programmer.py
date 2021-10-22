@@ -173,13 +173,13 @@ class FlashromProgrammer(_BaseProgrammer):
                     programmer += ',serial=%s' % servo_serial
             elif self._servo_version == 'servo_v3':
                 programmer = servo_v3_programmer
-            elif self._servo_version == 'servo_v4_with_servo_micro':
+            elif 'with_servo_micro' in self._servo_version:
                 # When a uServo is connected to a DUT with CCD support, the
                 # firmware programmer will always use the uServo to program.
                 servo_micro_serial = self._servo_serials.get('servo_micro')
                 programmer = servo_v4_with_micro_programmer
                 programmer += ':serial=%s' % servo_micro_serial
-            elif self._servo_version == 'servo_v4_with_ccd_cr50':
+            elif 'with_ccd_cr50' in self._servo_version:
                 ccd_serial = self._servo_serials.get('ccd')
                 programmer = servo_v4_with_ccd_programmer
                 programmer += ',serial=%s' % ccd_serial
@@ -240,7 +240,7 @@ class FlashromProgrammer(_BaseProgrammer):
         self._servo_version = self._servo.get_servo_version(active=True)
 
         # CCD takes care holding AP/EC. Don't need the following steps.
-        if self._servo_version != 'servo_v4_with_ccd_cr50':
+        if 'with_ccd_cr50' not in self._servo_version:
             faft_config = FAFTConfig(self._servo.get_board())
             self._servo_prog_state_delay = faft_config.servo_prog_state_delay
             self._servo_prog_state = (
