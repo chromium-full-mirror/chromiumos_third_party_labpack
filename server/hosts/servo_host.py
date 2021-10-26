@@ -1626,14 +1626,16 @@ class ServoHost(base_servohost.BaseServoHost):
         if not self.is_up_fast():
             logging.info('Servo-Host is not reachable.')
             return False
-        if not (self.is_labstation() or self.is_containerized_servod()):
-            logging.info('Servo-topology supported only for labstation '
-                         'or servod containers')
-            return False
         if not self.servo_serial:
             logging.info('Servo-topology required a servo serial.')
             return False
-        return True
+        if self.is_containerized_servod():
+            logging.info('Servod is running within a container.')
+            return True
+        if self.is_labstation():
+            logging.info('Servod is running within labstation.')
+            return True
+        return False
 
     def get_topology(self):
         """Get servo topology."""
