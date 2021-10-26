@@ -160,8 +160,11 @@ class _RootServoPresentVerifier(hosts.Verifier):
         raise hosts.AutoservVerifyError('Root servo not found!')
 
     def _is_applicable(self, host):
-        # Run only for servos under labstations.
-        if not (host.is_labstation() or host.is_containerized_servod()):
+        if host.is_containerized_servod():
+            logging.info('Servod is running within a container.')
+            return True
+        if not host.is_labstation():
+            logging.info('Not supported for servo_v3.')
             return False
         # Only run if the host is in the physical lab.
         return host.is_in_lab()
@@ -221,8 +224,12 @@ class _ServoFwVerifier(hosts.Verifier):
             )
 
     def _is_applicable(self, host):
+        if host.is_containerized_servod():
+            logging.info('Servod is running within a container.')
+            return True
         # Run only for servos under labstations.
-        if not (host.is_labstation() or host.is_containerized_servod()):
+        if not host.is_labstation():
+            logging.info('Not supported for servo_v3.')
             return False
         # Only run if the host is in the physical lab.
         return host.is_in_lab()
@@ -1045,7 +1052,10 @@ class ServodDutControllerMissingVerifier(hosts.Verifier):
             raise hosts.AutoservVerifyError('Servod is missing dut controller')
 
     def _is_applicable(self, host):
-        if not (host.is_labstation() or host.is_containerized_servod()):
+        if host.is_containerized_servod():
+            logging.info('Servod is running within a container.')
+            return True
+        if not host.is_labstation():
             logging.info('Not supported for servo_v3.')
             return False
         return host.is_in_lab()
