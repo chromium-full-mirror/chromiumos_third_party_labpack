@@ -1145,7 +1145,10 @@ class _ToggleCCLineRepair(hosts.RepairAction):
     @timeout_util.TimeoutDecorator(cros_constants.REPAIR_TIMEOUT_SEC)
     def repair(self, host):
         logging.info('Turn off configuration channel and wait 10 seconds.')
-        host.get_servo().set_nocheck('servo_v4_uart_cmd', 'cc off')
+        servo_uart_cmd = 'servo_v4_uart_cmd'
+        if not host.get_servo().has_control(servo_uart_cmd):
+            servo_uart_cmd = 'servo_v4p1_uart_cmd'
+        host.get_servo().set_nocheck(servo_uart_cmd, 'cc off')
         # wait till command will be effected
         time.sleep(self.CC_OFF_TIMEOUT)
 
@@ -1199,7 +1202,10 @@ class _FakedisconnectRepair(hosts.RepairAction):
         disc_cmd = ('fakedisconnect %d %d' %
                     (self.DISC_DELAY_MS, self.DISC_TIMEOUT_MS))
         # cannot use 'set' as control is not returned executed commands
-        host.get_servo().set_nocheck('servo_v4_uart_cmd', disc_cmd)
+        servo_uart_cmd = 'servo_v4_uart_cmd'
+        if not host.get_servo().has_control(servo_uart_cmd):
+            servo_uart_cmd = 'servo_v4p1_uart_cmd'
+        host.get_servo().set_nocheck(servo_uart_cmd, disc_cmd)
         logging.debug('Waiting %ss for affect of action', self.EXEC_TIMEOUT)
         time.sleep(self.EXEC_TIMEOUT)
         host.restart_servod()
