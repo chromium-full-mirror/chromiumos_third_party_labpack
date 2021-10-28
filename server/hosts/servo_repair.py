@@ -1161,12 +1161,17 @@ class _ToggleCCLineRepair(hosts.RepairAction):
         host.restart_servod()
 
     def _is_applicable(self, host):
-        if host.is_localhost() or not host.is_labstation():
+        if host.is_localhost():
+            logging.debug('Not supported for localhost.')
             return False
         if not host.servo_serial:
+            logging.debug('Servod does not have serial.')
             return False
         if not host.servo_recovery:
             logging.debug('Servod is not running in recovery mode.')
+            return False
+        if not (host.is_labstation() or host.is_containerized_servod()):
+            logging.debug('Not supported for servo_v3.')
             return False
         if not host.get_servo():
             logging.debug('Servo is not initialized.')
@@ -1211,12 +1216,17 @@ class _FakedisconnectRepair(hosts.RepairAction):
         host.restart_servod()
 
     def _is_applicable(self, host):
-        if host.is_localhost() or not host.is_labstation():
+        if host.is_localhost():
+            logging.debug('Not supported for localhost.')
             return False
         if not host.servo_serial:
+            logging.debug('Servod does not have serial.')
             return False
         if not host.servo_recovery:
             logging.debug('Servod is not running in recovery mode.')
+            return False
+        if not (host.is_labstation() or host.is_containerized_servod()):
+            logging.debug('Not supported for servo_v3.')
             return False
         if not host.get_servo():
             logging.debug('Servo is not initialized.')
@@ -1538,7 +1548,7 @@ class _ServoFwUpdateRepair(hosts.RepairAction):
 
     def _is_applicable(self, host):
         # Run only for servo_v4 and servo_v4p1.
-        return host.is_labstation()
+        return host.is_labstation() or host.is_containerized_servod()
 
     @property
     def description(self):

@@ -32,9 +32,10 @@ class _BaseUpdateServoFw(object):
     ACTIVE_UPDATER_PRINT = ACTIVE_UPDATER_CORE + "| awk '{print $2}' "
     ACTIVE_UPDATER_KILL = ACTIVE_UPDATER_PRINT + "| xargs kill -9 "
 
-    # Command to get PATH to the latest available firmware on the host
-    # param 1: servo board (servo_v4|servo_micro)
-    LATEST_VERSION_FW = 'realpath /usr/share/servo_updater/firmware/%s.bin'
+    # Command to update FW for servo. Always reboot servo after update.
+    UPDATER_TAIL = '-b %s -s "%s" -c %s --reboot'
+    UPDATER_CMD = 'servo_updater ' + UPDATER_TAIL
+    UPDATER_CONTAINER_CMD = 'python /update_servo_firmware.py ' + UPDATER_TAIL
 
     # Command to get servo firmware version for requested board and channel.
     LATEST_VERSION_CMD = 'servo_updater -p -b "%s" -c %s | grep firmware'
@@ -50,10 +51,8 @@ class _BaseUpdateServoFw(object):
         """
         self._host = servo_host
         self._device = device
-        # TODO(otabek@) remove when lab will use labstation R92
-        self._updater_accept_channel = False
 
-    def need_update(self, ignore_version=False, channel=DEFAULT_FW_CHANNEL):
+    def need_update(self, ignore_version=False, channel=None):
         """Verify that servo_update is required.
 
         @params ignore_version: Do not check the version on the device.
@@ -63,22 +62,25 @@ class _BaseUpdateServoFw(object):
 
         @returns: True if update required, False if not
         """
+        if channel is None or '':
+            channel = self.DEFAULT_FW_CHANNEL
         if not self._host:
+            logging.debug('Skip update as host is provided.')
             return False
         elif not self.get_serial_number():
+            logging.debug('Skip update as servo serial is empty.')
             return False
-        elif not self._host.is_labstation():
-            return False
-        elif not self._custom_verifier():
+        elif not (self._host.is_labstation()
+                  or self._host.is_containerized_servod()):
+            logging.debug('Skip as we run onlu from labstation and container.')
             return False
         elif not ignore_version:
-            return self._is_outdated_version(channel=channel)
+            if not self._is_outdated_version(channel=channel):
+                logging.debug('Skip as version is up today')
+                return False
         return True
 
-    def update(self,
-               force_update=False,
-               ignore_version=False,
-               channel=DEFAULT_FW_CHANNEL):
+    def update(self, force_update=False, ignore_version=False, channel=None):
         """Update firmware on the servo.
 
         Steps:
@@ -92,6 +94,8 @@ class _BaseUpdateServoFw(object):
                                 version R90. Possible values: stable, prev,
                                 dev, alpha.
         """
+        if channel is None or '':
+            channel = self.DEFAULT_FW_CHANNEL
         if not self.need_update(ignore_version, channel=channel):
             logging.info("The board %s doesn't need update.", self.get_board())
             return
@@ -104,15 +108,6 @@ class _BaseUpdateServoFw(object):
                          self._device.get_type(), self.get_board())
             return
         self._update_firmware(force_update, channel)
-
-    def _custom_verifier(self):
-        """Custom verifier to block update proceed.
-
-        Please override the method if board needs special checks.
-
-        @returns: True if can proceed with update, False if not.
-        """
-        return True
 
     def get_board(self):
         """Return servo type supported by updater."""
@@ -133,16 +128,13 @@ class _BaseUpdateServoFw(object):
         @params force_update:   Run updater with force option.
         @params channel:        Channel for servo firmware.
         """
+        if self._host.is_containerized_servod():
+            cmd = self.UPDATER_CONTAINER_CMD
+        else:
+            cmd = self.UPDATER_CMD
         board = self.get_board()
         serial_number = self.get_serial_number()
-        # Using inline command line build as creating separate constants
-        # make code more complicated on this stage.
-        # TODO(otabek@) use constants when lab will use labstation R92
-        cmd = 'servo_updater -b %s -s "%s"' % (board, serial_number)
-        if self._updater_accept_channel and channel:
-            cmd += ' -c %s ' % channel.lower()
-        # always reboot servo after updating the firmware
-        cmd += ' --reboot '
+        cmd = cmd % (board, serial_number, channel.lower())
         if force_update:
             cmd += ' --force '
         return cmd
@@ -175,22 +167,6 @@ class _BaseUpdateServoFw(object):
         return self._device.get_version()
 
     def _latest_version(self, channel):
-        """Get latest version available on servo-host.
-
-        @params channel: Compare version from special firmware channel
-        """
-        # New R90 moved firmware files and introduced new way to check
-        # the available firmware version on labstation. The servo_updater
-        # introduced new option 'print'.
-        cmd = 'servo_updater --help | grep print'
-        result = self._host.run(cmd, ignore_status=True)
-        if result.exit_status == 0 and channel:
-            self._updater_accept_channel = True
-            return self._latest_version_from_updater(channel)
-        self._updater_accept_channel = False
-        return self._latest_version_from_binary()
-
-    def _latest_version_from_updater(self, channel):
         """Get latest available version from servo_updater.
 
         @params channel: Compare version from special firmware channel
@@ -202,16 +178,6 @@ class _BaseUpdateServoFw(object):
             if len(result) == 2:
                 return result[-1].strip()
         return None
-
-    def _latest_version_from_binary(self):
-        """Get latest available version by parse firmware bin filename."""
-        cmd = self.LATEST_VERSION_FW % self.get_board()
-        filepath = self._host.run(cmd, ignore_status=True).stdout.strip()
-        if not filepath:
-            return None
-        version = os.path.basename(os.path.splitext(filepath)[0]).strip()
-        logging.debug('Latest version: %s', version)
-        return version
 
     def _is_outdated_version(self, channel):
         """Compare version to determine request to update the Servo or not.
@@ -344,12 +310,16 @@ def any_servo_needs_firmware_update(host):
         if not updater_type:
             logging.debug('No specified updater for %s', board)
             continue
+        logging.debug('Specified updater found for %s', board)
         # Creating update instance
         updater = updater_type(host, device)
         if updater.need_update(ignore_version=False,
                                channel=host.servo_fw_channel):
             logging.info('The servo: %s requires firmware update!', board)
             has_servo_requires_update = True
+        else:
+            logging.info('The servo: %s is not requires firmware update!',
+                         board)
     return has_servo_requires_update
 
 
@@ -377,7 +347,7 @@ def update_servo_firmware(host,
     if boards is None:
         boards = []
     if ignore_version:
-        logging.debug('Running servo_updater with ignore_version=True')
+        logging.info('Running servo_updater with ignore_version=True')
 
     if not host:
         raise ValueError('ServoHost is not provided.')
@@ -392,6 +362,11 @@ def update_servo_firmware(host,
         use_force_option_as_first_attempt = True
     # to run updater we need make sure the servod is not running
     host.stop_servod()
+    if host.is_containerized_servod():
+        # Starting container as servo_updated located in it.
+        # Starting without servod as it can block access to the servos.
+        host.start_containerized_servod(with_servod=False)
+
     # Collection to count which board failed to update
     fail_boards = []
 
@@ -434,6 +409,10 @@ def update_servo_firmware(host,
             metrics.Counter('chromeos/autotest/servo/fw_update_fail'
                             ).increment(fields={'host': hostname})
             fail_boards.append(board)
+
+    # Need stop containr without servod we started above.
+    if host.is_containerized_servod():
+        host.stop_servod()
 
     if len(fail_boards) == 0:
         logging.info('Successfull updated all requested servos.')

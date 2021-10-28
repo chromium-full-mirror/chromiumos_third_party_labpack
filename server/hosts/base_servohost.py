@@ -596,7 +596,7 @@ class BaseServoHost(ssh_host.SSHHost):
                 raise error.AutoservRunError('command execution error',
                                              e.result_obj)
         elif self.is_containerized_servod():
-            logging.info("Trying to run the command %s", command)
+            logging.debug("Trying to run the command %s", command)
             client = docker_utils.get_docker_client()
             container = client.containers.get(self.hostname)
             try:

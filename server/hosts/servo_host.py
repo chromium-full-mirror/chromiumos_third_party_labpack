@@ -755,7 +755,7 @@ class ServoHost(base_servohost.BaseServoHost):
             logging.error('%s', e)
         return True
 
-    def start_containerized_servod(self):
+    def start_containerized_servod(self, with_servod=True):
         """Start the servod process on servohost."""
         logging.info("Starting servod container %s.", self.hostname)
         client = docker_utils.get_docker_client()
@@ -803,6 +803,10 @@ class ServoHost(base_servohost.BaseServoHost):
             container_network = "default_satlab"
         logging.info('Servod container environment: %s', environment)
         try:
+            start_cmds = ["bash", "/start_servod.sh"]
+            if not with_servod:
+                # In some cases we do not need container without running servod.
+                start_cmds = ["tail", "-f", "/dev/null"]
             container = client.containers.run(
                     image,
                     remove=False,
@@ -818,7 +822,7 @@ class ServoHost(base_servohost.BaseServoHost):
                             (self.hostname, self.servo_port)
                     ],
                     environment=environment,
-                    command=["bash", "/start_servod.sh"],
+                    command=start_cmds,
             )
             # Wait for 60 sec, probing servod ready state fails.
             if not self.wait_for_init_servod_in_container(container):
