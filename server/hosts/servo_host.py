@@ -25,7 +25,6 @@ import time
 import six
 import string
 import six.moves.xmlrpc_client
-import socket
 
 try:
     import docker
@@ -477,7 +476,7 @@ class ServoHost(base_servohost.BaseServoHost):
                       ' for model:%s' % model, 'cannot find firmware image')
         return ec_image, bios_image
 
-    def flash_ap_firmware_via_servo(self, image):
+    def flash_ap_firmware_via_servo(self, image, gbb_flags=None):
         """Flash AP firmware by use a provided image.
 
         This is will be a short term enhanment for infra repair use, it use
@@ -486,10 +485,25 @@ class ServoHost(base_servohost.BaseServoHost):
         AP firmware update.
         @TODO(xianuowang@) Remove this method once b/148403277 implemented.
 
-        @param image: the firmware image path on servohost.
+        @param image:     The firmware image path on servohost.
+        @param gbb_flags: Gbb flags to overwrite when flash firmware.
+                          We take a decimal integer here because futility takes
+                          decimal, but please note gbb flags are represented in
+                          hexadecimal so for example gbb_falgs=24 here will
+                          actually translate to `0x00000018` in ChromeOS.
         """
-        cmd = 'futility update -i %s --servo_port=%s'
-        self.run(cmd % (image, self.servo_port), timeout=900)
+        cmd_template = 'futility update -i %s --servo_port=%s'
+        cmd = cmd_template % (image, self.servo_port)
+        if type(gbb_flags) in (int, str):
+            try:
+                gbb_flags = int(gbb_flags)
+                logging.info('Flash firmware with overwriting gbb flags to %s',
+                             hex(gbb_flags))
+                cmd += ' --gbb_flags=%s' % gbb_flags
+            except ValueError:
+                logging.warning('Ignoring invalid gbb_flags argument: %s',
+                                gbb_flags)
+        self.run(cmd, timeout=900)
 
     def _probe_and_validate_usb_dev(self):
         """This method probe the usb dev path by talking to servo, and then
