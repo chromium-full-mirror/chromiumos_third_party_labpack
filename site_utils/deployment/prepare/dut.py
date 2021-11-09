@@ -300,6 +300,16 @@ def verify_ccd_testlab_enable(host):
                 'testlab mode is required for all DUTs that support CR50.')
 
 
+def is_servo_has_cr50(host):
+    """Check if connected servo is type-c.
+
+    @param host: any host
+    """
+    host_info = host.host_info_store.get()
+    servo_type = host_info.get_label_value('servo_type')
+    return 'ccd_cr50' in servo_type
+
+
 def verify_labstation_RPM_config_unsafe(host):
     """Verify that we can power cycle a labstation with its RPM information.
     Any host without RPM information will be safely skipped.

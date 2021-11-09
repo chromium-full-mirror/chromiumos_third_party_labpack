@@ -135,7 +135,14 @@ def main():
                     preparedut.verify_servo(host)
                     preparedut.verify_battery_status(host)
                     preparedut.verify_ccd_testlab_enable(host)
-                    rpm_validator.verify_unsafe(host)
+                    # TODO(otabek): remove when b/205728276 and update based
+                    # on response. For servo_v4 (type-c) we disable RPM check
+                    # as part of deployment
+                    if preparedut.is_servo_has_cr50(host):
+                        logging.info('RPM check is disabled for ccd_cr50'
+                                     ' by b/205736078')
+                    else:
+                        rpm_validator.verify_unsafe(host)
             except Exception as err:
                 logging.error("fail on pre-deploy verification: %s", err)
                 return RETURN_CODES.PRE_DEPLOY_VERIFICATION_FAILURE
