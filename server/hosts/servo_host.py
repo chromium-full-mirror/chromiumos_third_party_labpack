@@ -1888,7 +1888,7 @@ def create_servo_host(dut,
         # TODO(otabek@): Update for servod-manager.
         # Servod docker is not available for access.
         newhost.start_containerized_servod()
-    if newhost.use_icmp and not newhost.is_up_fast(count=3):
+    elif newhost.use_icmp and not newhost.is_up_fast(count=3):
         # ServoHost has internal check to wait if servo-host is in reboot
         # process. If servo-host still is not available this check will stop
         # further attempts as we do not have any option to recover servo_host.
