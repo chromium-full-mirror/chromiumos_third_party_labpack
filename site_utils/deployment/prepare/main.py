@@ -68,43 +68,60 @@ def main():
             return
 
         is_labstation = (host_info.get().os == "labstation")
+        has_servo = preparedut.is_servo_present(host)
 
         if 'servo-verification' in opts.actions:
             try:
-                if not is_labstation:
+                if is_labstation:
+                    logging.info('Step is not applicable for labstations!')
+                elif has_servo:
                     preparedut.verify_servo(host)
+                else:
+                    logging.info('Skipping the step as servo is not present')
             except Exception as err:
-                logging.error("fail to check servo: %s", err)
+                logging.error('fail to check servo: %s', err)
                 return RETURN_CODES.SERVO_VERIFICATION_FAILURE
 
         if 'stage-usb' in opts.actions:
             try:
-                repair_image = afe_utils.get_stable_cros_image_name_v2(
-                        host_info.get())
-                logging.info('Using repair image %s, obtained from AFE',
-                             repair_image)
-                preparedut.download_image_to_servo_usb(host, repair_image)
+                if has_servo:
+                    repair_image = afe_utils.get_stable_cros_image_name_v2(
+                            host_info.get())
+                    logging.info('Using repair image %s, obtained from AFE',
+                                 repair_image)
+                    preparedut.download_image_to_servo_usb(host, repair_image)
+                else:
+                    logging.info('Skipping the step as servo is not present')
             except Exception as err:
                 logging.error("fail to stage image to usb: %s", err)
                 return RETURN_CODES.STAGE_USB_FAILURE
 
         if 'install-test-image' in opts.actions:
             try:
-                preparedut.install_test_image(host)
+                if has_servo:
+                    preparedut.install_test_image(host)
+                else:
+                    logging.info('Skipping the step as servo is not present')
             except Exception as err:
                 logging.error("fail to install test image: %s", err)
                 return RETURN_CODES.INSTALL_TEST_IMAGE_FAILURE
 
         if 'install-firmware' in opts.actions:
             try:
-                preparedut.install_firmware(host)
+                if has_servo:
+                    preparedut.install_firmware(host)
+                else:
+                    logging.info('Skipping the step as servo is not present')
             except Exception as err:
                 logging.error("fail to install firmware: %s", err)
                 return RETURN_CODES.INSTALL_FIRMWARE_FAILURE
 
         if 'verify-recovery-mode' in opts.actions:
             try:
-                preparedut.verify_boot_into_rec_mode(host)
+                if has_servo:
+                    preparedut.verify_boot_into_rec_mode(host)
+                else:
+                    logging.info('Skipping the step as servo is not present')
             except Exception as err:
                 logging.error("fail to boot from recovery mode: %s", err)
                 return RETURN_CODES.BOOT_FROM_RECOVERY_MODE_FAILURE
@@ -132,13 +149,21 @@ def main():
                     logging.info("testing RPM information on labstation")
                     preparedut.verify_labstation_RPM_config_unsafe(host)
                 else:
-                    preparedut.verify_servo(host)
+                    # Checks required servo.
+                    if has_servo:
+                        preparedut.verify_servo(host)
+                    else:
+                        logging.info('Skipping servo check as not present')
                     preparedut.verify_battery_status(host)
-                    preparedut.verify_ccd_testlab_enable(host)
+                    if has_servo:
+                        preparedut.verify_ccd_testlab_enable(host)
+                    else:
+                        logging.info('Skipping ccd testlab check as servo'
+                                     ' not present')
                     # TODO(otabek): remove when b/205728276 and update based
                     # on response. For servo_v4 (type-c) we disable RPM check
                     # as part of deployment
-                    if preparedut.is_servo_has_cr50(host):
+                    if has_servo and preparedut.is_servo_has_cr50(host):
                         logging.info('RPM check is disabled for ccd_cr50'
                                      ' by b/205736078')
                     else:
@@ -216,6 +241,8 @@ def create_host(hostname, host_info, results_dir):
 
     need_servo = info.os != 'labstation'
     dut_logs_dir = None
+    if not info.attributes.get('servo_host'):
+        need_servo = False
 
     if need_servo:
         # We assume target host is a cros DUT by default

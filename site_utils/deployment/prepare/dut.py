@@ -310,6 +310,18 @@ def is_servo_has_cr50(host):
     return 'ccd_cr50' in servo_type
 
 
+def is_servo_present(host):
+    """Check if servo host is present in host-info.
+
+    Do not check present of servo-serial as we still have some servo_v3
+    in the lab and do not want to break them.
+
+    @param host: any host
+    """
+    host_info = host.host_info_store.get()
+    return bool(host_info.attributes.get('servo_host'))
+
+
 def verify_labstation_RPM_config_unsafe(host):
     """Verify that we can power cycle a labstation with its RPM information.
     Any host without RPM information will be safely skipped.
