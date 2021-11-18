@@ -87,13 +87,7 @@ class RemoteHost(base_classes.Host):
         you will need to call this method yourself (and enforce the
         single-call rule).
         """
-        try:
-            cmd = ('test ! -e /var/log/messages || cp -f /var/log/messages '
-                   '%s') % self.VAR_LOG_MESSAGES_COPY_PATH
-            self.run(cmd)
-        except Exception as e:
-            # Non-fatal error
-            logging.info('Failed to copy /var/log/messages at startup: %s', e)
+        pass
 
 
     def get_autodir(self):
