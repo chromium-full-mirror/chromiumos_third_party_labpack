@@ -111,6 +111,8 @@ class BaseServoHost(ssh_host.SSHHost):
         @returns a string representing this labstation's board or None if
          target host is not using a ChromeOS image(e.g. test in chroot).
         """
+        if self.is_containerized_servod():
+            return 'docker'
         output = self.run('cat /etc/lsb-release', ignore_status=True).stdout
         return lsbrelease_utils.get_current_board(lsb_release_content=output)
 
