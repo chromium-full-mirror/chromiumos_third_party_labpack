@@ -187,6 +187,9 @@ class FirmwareRepair(hosts.RepairAction):
     def _run_faft_repair(self, host, build):
         host.firmware_install(build)
 
+    def _run_faft_repair_from_servo_host(self, host, build):
+        host.firmware_install_servo_host(build)
+
     def _run_general_repair(self, host, build):
         # As GeneralFirmwareRepair is the last repair action, we expect
         # stable_version os image is loaded on usbkey during other repair
@@ -252,7 +255,12 @@ class FaftFirmwareRepair(FirmwareRepair):
         repair_utils.require_servo(host, ignore_state=True)
         build = self._get_faft_stable_build(host)
         if build:
-            self._run_faft_repair(host, build)
+            if host._servo_host.is_containerized_servod():
+                # For container we download image to the container as not
+                # limition by space.
+                self._run_faft_repair_from_servo_host(host, build)
+            else:
+                self._run_faft_repair(host, build)
         else:
             logging.info('Cannot find faft stable_version, falling back to'
                          ' use firmware on OS stable_version.')
@@ -264,6 +272,12 @@ class FaftFirmwareRepair(FirmwareRepair):
             self._run_general_repair(host, build)
 
     def _is_applicable(self, host):
+        if not host._servo_host or not host.servo:
+            logging.info('Skip as servo is not foud...')
+            return False
+        # For servod-container will try to recover immediately for now.
+        if host._servo_host.is_containerized_servod():
+            return True
         return _is_firmware_testing_device(host)
 
     @property

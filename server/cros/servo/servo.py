@@ -220,36 +220,52 @@ class _WrapServoErrors(object):
             del exc_tb
 
 
-def _extract_image_from_tarball(tarball, dest_dir, image_candidates, timeout):
+def _extract_image_from_tarball(tarball,
+                                dest_dir,
+                                image_candidates,
+                                timeout,
+                                host=None):
     """Try extracting the image_candidates from the tarball.
 
-    @param tarball: The path of the tarball.
-    @param dest_path: The path of the destination.
-    @param image_candidates: A tuple of the paths of image candidates.
-    @param timeout: Time to wait in seconds before timing out.
+    @param tarball:             The path of the tarball.
+    @param dest_path:           The path of the destination.
+    @param image_candidates:    A tuple of the paths of image candidates.
+    @param timeout:             Time to wait in seconds before timing out.
+    @param host:                Remote host to perform extract if supplied.
 
     @return: The first path from the image candidates, which succeeds, or None
              if all the image candidates fail.
     """
 
     # Create the firmware_name subdirectory if it doesn't exist
-    if not os.path.exists(dest_dir):
+    if host:
+        host.run('mkdir -p %s' % dest_dir)
+    elif not os.path.exists(dest_dir):
         os.mkdir(dest_dir)
 
     # Generate a list of all tarball files
-    stdout = server_utils.system_output('tar tf %s' % tarball,
-                                        timeout=timeout,
-                                        ignore_status=True)
-    tarball_files = stdout.splitlines()
+    if host:
+        tarball_files = host.run('tar tf %s' % tarball,
+                                 timeout=timeout,
+                                 ignore_status=True).stdout.splitlines()
+    else:
+        tarball_files = server_utils.system_output(
+                'tar tf %s' % tarball, timeout=timeout,
+                ignore_status=True).splitlines()
 
     # Check if image candidates are in the list of tarball files
     for image in image_candidates:
         if image in tarball_files:
+            logging.debug('Found %s file in the image: %s', image, tarball)
             # Extract and return the first image candidate found
             tar_cmd = 'tar xf %s -C %s %s' % (tarball, dest_dir, image)
-            status = server_utils.system(tar_cmd,
-                                         timeout=timeout,
-                                         ignore_status=True)
+            if host:
+                status = host.run(tar_cmd, timeout=timeout,
+                                  ignore_status=True).exit_status
+            else:
+                status = server_utils.system(tar_cmd,
+                                             timeout=timeout,
+                                             ignore_status=True)
             if status == 0:
                 return image
     return None
@@ -1454,12 +1470,14 @@ class Servo(object):
             self._programmer.program_ec(image)
 
 
-    def extract_ec_image(self, board, model, tarball_path):
+    def extract_ec_image(self, board, model, tarball_path, host=None):
         """Helper function to extract EC image from downloaded tarball.
 
-        @param board: The DUT board name.
-        @param model: The DUT model name.
-        @param tarball_path: The path of the downloaded build tarball.
+        @param board:           The DUT board name.
+        @param model:           The DUT model name.
+        @param tarball_path:    The path of the downloaded build tarball.
+        @param host:            The host where the tarball file located.
+                                The host used for file extractions.
 
         @return: Path to extracted EC image.
         """
@@ -1489,10 +1507,9 @@ class Servo(object):
 
         # Extract EC image from tarball
         dest_dir = os.path.join(os.path.dirname(tarball_path), 'EC')
-        ec_image = _extract_image_from_tarball(tarball_path,
-                                               dest_dir,
+        ec_image = _extract_image_from_tarball(tarball_path, dest_dir,
                                                ec_image_candidates,
-                                               self.EXTRACT_TIMEOUT_SECS)
+                                               self.EXTRACT_TIMEOUT_SECS, host)
 
         # Check if EC image was found and return path or raise error
         if ec_image:
@@ -1501,20 +1518,21 @@ class Servo(object):
             mon_candidates = [candidate.replace('ec.bin', 'npcx_monitor.bin')
                               for candidate in ec_image_candidates]
             _extract_image_from_tarball(tarball_path, dest_dir, mon_candidates,
-                                        self.EXTRACT_TIMEOUT_SECS)
+                                        self.EXTRACT_TIMEOUT_SECS, host)
 
             return os.path.join(dest_dir, ec_image)
         else:
             raise error.TestError('Failed to extract EC image from %s' %
                                   tarball_path)
 
-
-    def extract_bios_image(self, board, model, tarball_path):
+    def extract_bios_image(self, board, model, tarball_path, host=None):
         """Helper function to extract BIOS image from downloaded tarball.
 
-        @param board: The DUT board name.
-        @param model: The DUT model name.
-        @param tarball_path: The path of the downloaded build tarball.
+        @param board:           The DUT board name.
+        @param model:           The DUT model name.
+        @param tarball_path:    The path of the downloaded build tarball.
+        @param host:            The host where the tarball file located.
+                                The host used for file extractions.
 
         @return: Path to extracted BIOS image.
         """
@@ -1538,10 +1556,10 @@ class Servo(object):
 
         # Extract BIOS image from tarball
         dest_dir = os.path.join(os.path.dirname(tarball_path), 'BIOS')
-        bios_image = _extract_image_from_tarball(tarball_path,
-                                                 dest_dir,
+        bios_image = _extract_image_from_tarball(tarball_path, dest_dir,
                                                  bios_image_candidates,
-                                                 self.EXTRACT_TIMEOUT_SECS)
+                                                 self.EXTRACT_TIMEOUT_SECS,
+                                                 host)
 
         # Check if BIOS image was found and return path or raise error
         if bios_image:

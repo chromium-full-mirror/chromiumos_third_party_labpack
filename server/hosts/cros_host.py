@@ -826,6 +826,117 @@ class CrosHost(abstract_ssh.AbstractSSHHost):
         else:
             raise error.TestFail('Failed to read version from %s.' % image)
 
+    def firmware_install_servo_host(self,
+                                    build,
+                                    local_tarball=None,
+                                    install_ec=True,
+                                    install_bios=True,
+                                    gbb_flags=None):
+        """Install firmware to the DUT.
+
+        The method close to the firmware_install method but used some host to
+        download and extract EC/AP images.
+
+        Use stateful update if the DUT is already running the same build.
+        Stateful update does not update kernel and tends to run much faster
+        than a full reimage. If the DUT is running a different build, or it
+        failed to do a stateful update, full update, including kernel update,
+        will be applied to the DUT.
+
+        Once a host enters firmware_install its fw[ro|rw]_version label will
+        be removed. After the firmware is updated successfully, a new
+        fw[ro|rw]_version label will be added to the host.
+
+        @param build: The build version to which we want to provision the
+                      firmware of the machine,
+                      e.g. 'link-firmware/R22-2695.1.144'.
+        @param local_tarball: Path to local firmware image for installing
+                              without devserver.
+        @param install_ec: True to install EC FW, and False to skip it.
+        @param install_bios: True to install BIOS, and False to skip it.
+        @param gbb_flags: Gbb flags to overwrite when flash firmware.
+                          We take a decimal integer here because futility takes
+                          decimal, but please note gbb flags are represented in
+                          hexadecimal so for example gbb_falgs=24 here will
+                          actually translate to `0x00000018` in ChromeOS.
+
+
+        TODO(dshi): After bug 381718 is fixed, update here with corresponding
+                    exceptions that could be raised.
+
+        """
+        if not self.servo:
+            raise error.TestError('Host %s does not have working servo.' %
+                                  self.hostname)
+
+        # Get the DUT board name from AFE.
+        info = self.host_info_store.get()
+        board = info.board
+        model = info.model
+
+        servo_host = self._servo_host
+        # If tarball path not provided fetch it from the dev server
+        tdir = None
+        if not local_tarball:
+            logging.info('Will download firmware from build %s.', build)
+            ds = dev_server.ImageServer.resolve(build, self.hostname)
+            ds.stage_artifacts(build, ['firmware'])
+            # TODO: Add retry for other cache servers if have more than one.
+            logging.debug('Path to cache server: %s', ds.url())
+            image_url = self._FW_IMAGE_URL_PATTERN % (ds.url(), build)
+            logging.debug('Full image path to the image: %s', image_url)
+            tdir = '/tmp/fw_servo_%s' % servo_host.servo_port
+            tdist = '%s/fw_image.tar.bz2' % tdir
+            # Remove the folder if was exist.
+            servo_host.run('rm -rf %s' % tdir)
+            servo_host.run('mkdir -p %s' % tdir)
+            servo_host.run('curl -o %s %s' % (tdist, image_url))
+            local_tarball = tdist
+
+        ec_image = None
+        if install_ec:
+            # Extract EC image from tarball
+            logging.info('Extracting EC image.')
+            ec_image = self.servo.extract_ec_image(board, model, local_tarball,
+                                                   self._servo_host)
+            logging.info('Extracted EC: %s', ec_image)
+
+        bios_image = None
+        if install_bios:
+            # Extract BIOS image from tarball
+            logging.info('Extracting BIOS image.')
+            bios_image = self.servo.extract_bios_image(board, model,
+                                                       local_tarball,
+                                                       self._servo_host)
+            logging.info('Extracted BIOS: %s', bios_image)
+
+        if not bios_image and not ec_image:
+            raise error.TestError('No firmware installation was processed.')
+
+        # Clear firmware version labels
+        self._clear_fw_version_labels(False)
+
+        # Install firmware from local tarball
+        try:
+            # Host is not available, program firmware using servo
+            if ec_image:
+                self.servo.program_ec(ec_image, False, copy_image=False)
+            if bios_image:
+                # Switch to use futility.
+                self._servo_host.flash_ap_firmware_via_servo(
+                        bios_image, gbb_flags=gbb_flags)
+                # self.servo.program_bios(bios_image, rw_only)
+            if utils.host_is_in_lab_zone(self.hostname):
+                self._add_fw_version_label(build, False)
+
+            # Reboot and wait for DUT after installing firmware
+            logging.info('Rebooting DUT.')
+            self.servo.get_power_state_controller().reset()
+            time.sleep(self.servo.BOOT_DELAY)
+            self.test_wait_for_boot()
+        finally:
+            if tdir:
+                servo_host.run('rm -rf %s' % tdir)
 
     def firmware_install(self, build, rw_only=False, dest=None,
                          local_tarball=None, verify_version=False,
@@ -912,7 +1023,7 @@ class CrosHost(abstract_ssh.AbstractSSHHost):
             # Extract EC image from tarball
             logging.info('Extracting EC image.')
             ec_image = self.servo.extract_ec_image(board, model, local_tarball)
-            logging.info('Extracted: %s', ec_image)
+            logging.info('Extracted EC: %s', ec_image)
 
         bios_image = None
         if install_bios:
@@ -920,7 +1031,7 @@ class CrosHost(abstract_ssh.AbstractSSHHost):
             logging.info('Extracting BIOS image.')
             bios_image = self.servo.extract_bios_image(board, model,
                                                        local_tarball)
-            logging.info('Extracted: %s', bios_image)
+            logging.info('Extracted BIOS: %s', bios_image)
 
         if not bios_image and not ec_image:
             raise error.TestError('No firmware installation was processed.')
