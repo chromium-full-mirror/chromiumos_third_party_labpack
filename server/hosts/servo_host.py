@@ -503,7 +503,9 @@ class ServoHost(base_servohost.BaseServoHost):
             except ValueError:
                 logging.warning('Ignoring invalid gbb_flags argument: %s',
                                 gbb_flags)
-        self.run(cmd, timeout=900)
+        # Flashint time is different per model but can go for up to 25 minutes.
+        # Setting 30 minutes if device react slower.
+        self.run(cmd, timeout=1800)
 
     def _probe_and_validate_usb_dev(self):
         """This method probe the usb dev path by talking to servo, and then
