@@ -599,7 +599,7 @@ class BaseServoHost(ssh_host.SSHHost):
                                              e.result_obj)
         elif self.is_containerized_servod():
             logging.debug("Trying to run the command %s", command)
-            client = docker_utils.get_docker_client()
+            client = docker_utils.get_docker_client(timeout=timeout)
             container = client.containers.get(self.hostname)
             try:
                 (exit_code,
@@ -679,7 +679,7 @@ class BaseServoHost(ssh_host.SSHHost):
                  False otherwise.
         """
         if self.is_containerized_servod():
-            client = docker_utils.get_docker_client()
+            client = docker_utils.get_docker_client(timeout=timeout)
             try:
                 (exit_code,
                  output) = client.containers.get(self.hostname).exec_run("ps")

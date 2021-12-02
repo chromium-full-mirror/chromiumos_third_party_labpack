@@ -19,16 +19,16 @@ DOCKER_TCP_SERVER_IP = env_vars.get('DOCKER_TCP_SERVER_IP', '192.168.231.1')
 DOCKER_TCP_SERVER_PORT = env_vars.get('DOCKER_TCP_SERVER_PORT', '2375')
 
 
-def get_docker_client():
+def get_docker_client(timeout=300):
     """
     Get the client of the host Docker server either via default Docker socket or TCP connection.
     """
     if os.path.exists(DOCKER_SOCKET):
-        client = docker.from_env(timeout=300)
+        client = docker.from_env(timeout=timeout)
     else:
         tcp_connection = "tcp://{}:{}".format(DOCKER_TCP_SERVER_IP,
                                               DOCKER_TCP_SERVER_PORT)
-        client = docker.DockerClient(base_url=tcp_connection, timeout=300)
+        client = docker.DockerClient(base_url=tcp_connection, timeout=timeout)
     return client
 
 
