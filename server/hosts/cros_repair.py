@@ -1342,6 +1342,9 @@ class ServoCr50RebootRepair(_ResetRepairAction):
                 host.servo.initialize_dut()
 
     def _is_applicable(self, host):
+        # TODO(b/208885949): remove when fixed.
+        if (host._servo_host and host._servo_host.is_containerized_servod()):
+            return False
         if host.servo:
             if host.servo.has_control('cr50_reboot'):
                 return True
