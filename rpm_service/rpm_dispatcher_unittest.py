@@ -28,8 +28,8 @@ class TestRPMDispatcher(mox.MoxTestBase):
 
     queue_request is the only public method of RPM Dispatcher, however its logic
     is simple and relies mostly on the private methods; therefore, I am testing
-    primarily RPMDispatcher initialization and _get_rpm_controller (which calls
-    _create_rpm_controller) to verify correct implementation.
+    primarily RPMDispatcher initialization and _get_rpm_controller to verify
+    correct implementation.
     """
 
     def setUp(self):

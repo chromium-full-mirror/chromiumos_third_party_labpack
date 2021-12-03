@@ -10,7 +10,6 @@ from __future__ import print_function
 import atexit
 import errno
 import logging
-import re
 import sys
 import socket
 import threading
@@ -138,7 +137,7 @@ class RPMDispatcher(object):
     def _get_rpm_controller(self, rpm_hostname, hydra_hostname=None):
         """
         Private method that retreives the appropriate RPMController instance
-        for this RPM Hostname or calls _create_rpm_controller it if it does not
+        for this RPM Hostname or create a controller instance if it does not
         already exist.
 
         @param rpm_hostname: hostname of the RPM whose RPMController we want.
@@ -147,37 +146,12 @@ class RPMDispatcher(object):
         """
         if not rpm_hostname:
             return None
-        rpm_controller = self._worker_dict_get(rpm_hostname)
-        if not rpm_controller:
-            rpm_controller = self._create_rpm_controller(
-                    rpm_hostname, hydra_hostname)
-            self._worker_dict_put(rpm_hostname, rpm_controller)
-        return rpm_controller
-
-    def _create_rpm_controller(self, rpm_hostname, hydra_hostname):
-        """
-        Determines the type of RPMController required and initializes it.
-
-        @param rpm_hostname: Hostname of the RPM we need to communicate with.
-
-        @return: RPMController instance responsible for this RPM.
-        """
-        hostname_elements = rpm_hostname.split('-')
-        if hostname_elements[-2] == 'poe':
-            # POE switch hostname looks like 'chromeos2-poe-switch1'.
-            logging.info('The controller is a Cisco POE switch.')
-            return rpm_controller.CiscoPOEController(rpm_hostname)
-        else:
-            # The device is an RPM.
-            rack_id = hostname_elements[-2]
-            rpm_typechecker = re.compile('rack[0-9]+[a-z]+')
-            if rpm_typechecker.match(rack_id):
-                logging.info('RPM is a webpowered device.')
-                return rpm_controller.WebPoweredRPMController(rpm_hostname)
-            else:
-                logging.info('RPM is a Sentry CDU device.')
-                return rpm_controller.SentryRPMController(
-                        hostname=rpm_hostname, hydra_hostname=hydra_hostname)
+        controller = self._worker_dict_get(rpm_hostname)
+        if not controller:
+            controller = rpm_controller.SentryRPMController(
+                    hostname=rpm_hostname, hydra_hostname=hydra_hostname)
+            self._worker_dict_put(rpm_hostname, controller)
+        return controller
 
     def _get_serveruri(self):
         """
