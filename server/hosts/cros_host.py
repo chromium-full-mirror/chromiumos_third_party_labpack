@@ -1092,7 +1092,8 @@ class CrosHost(abstract_ssh.AbstractSSHHost):
                 if ec_image:
                     self.servo.program_ec(ec_image, rw_only)
                 if bios_image:
-                    self.servo.program_bios(bios_image, rw_only)
+                    # Ignore rw_only option as repair flash both.
+                    self._servo_host.flash_ap_firmware_via_servo(bios_image)
                 if utils.host_is_in_lab_zone(self.hostname):
                     self._add_fw_version_label(build, rw_only)
 
