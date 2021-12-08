@@ -416,9 +416,12 @@ class FirmwareVersionVerifier(hosts.Verifier):
         hardware_a = version_a.split('.')[0]
         hardware_b = version_b.split('.')[0]
         if hardware_a != hardware_b:
-            message = 'Hardware/Firmware mismatch updating %s to %s'
-            raise hosts.AutoservVerifyError(
-                    message % (version_a, version_b))
+            logging.warning('Hardware/Firmware mismatch updating %s to %s',
+                            version_a, version_b)
+            # Blocking the error as if somehow user flashed wrong fw we still
+            # need to recover device.
+            # raise hosts.AutoservVerifyError(
+            #         message % (version_a, version_b))
 
     def _is_stable_image_installed(self, host):
         """Verify that ChromeOS image on host is a stable version.
