@@ -416,7 +416,7 @@ class RPMController(object):
 
     def _login(self):
         """
-        Log in into the RPM Device.
+        Log in into the RPM Device, should be implemented in each subclass.
 
         The login process should be able to connect to the device whether or not
         it is behind a hydra serial concentrator.
@@ -424,28 +424,7 @@ class RPMController(object):
         @return: ssh - a pexpect.spawn instance if the connection was successful
                  or None if it was not.
         """
-        if self.behind_hydra:
-            # Tunnel the connection through the hydra.
-            ssh = self._authenticate_with_hydra()
-            if not ssh:
-                return None
-            ssh.sendline(self._username)
-        else:
-            # Connect directly to the RPM over SSH.
-            hostname = '%s.%s' % (self.hostname, self._dns_zone)
-            cmd = RPMController.SSH_LOGIN_CMD % (self._username, hostname)
-            try:
-                ssh = pexpect.spawn(cmd)
-            except pexpect.ExceptionPexpect:
-                return None
-        # Wait for the password prompt
-        try:
-            ssh.expect(self.PASSWORD_PROMPT, timeout=60)
-            ssh.sendline(self._password)
-            ssh.expect(self.DEVICE_PROMPT, timeout=60)
-        except pexpect.ExceptionPexpect:
-            return None
-        return ssh
+        raise NotImplementedError
 
     def _logout(self, ssh, admin_logout=False):
         """
@@ -571,17 +550,106 @@ class SentryRPMController(RPMController):
     @var _username: username used to access device.
     @var _password: password used to access device.
     """
-
-    DEVICE_PROMPT = ['Switched CDU:', 'Switched PDU:']
     SET_STATE_CMD = '%s %s'
     SUCCESS_MSG = 'Command successful'
     NUM_OF_OUTLETS = 17
     TYPE = 'Sentry'
 
+    # Constants for login workflow.
+    WRONG_PASSWORD_PROMPT = ['password:', 'Password:']
+    DEVICE_PROMPT = ['Switched CDU:', 'Switched PDU:']
+
+    # Constants for change password workflow.
+    CHANGE_PASSWORD_TIMEOUT = 10
+    CHANGE_PASSWORD_CMD = 'PASSWORD'
+    CURRENT_PASSWORD_PROMPT = 'Enter Current Password:'
+    NEW_PASSWORD_PROMPT = 'Enter New Password:'
+    VERIFY_PASSWORD_PROMPT = 'Verify Password:'
+
     def __init__(self, hostname, hydra_hostname=None):
         super(SentryRPMController, self).__init__(hostname, hydra_hostname)
         self._username = rpm_config.get('SENTRY', 'username')
-        self._password = rpm_config.get('SENTRY', 'password')
+        # For RPM in Lab, we use a password defined in k8s deployment.
+        self._password = os.environ.get('RPM_PASSWORD')
+        # This is for RPM at first deployment, which use default password.
+        self._default_password = rpm_config.get('SENTRY', 'password')
+        if not self._password:
+            self._password = self._default_password
+
+    def _login(self):
+        """
+        Log in into the Sentry RPM device..
+
+        The login process should be able to connect to the device whether or not
+        it is behind a hydra serial concentrator.
+
+        @return: ssh - a pexpect.spawn instance if the connection was successful
+                 or None if it was not.
+        """
+        if self.behind_hydra:
+            # Tunnel the connection through the hydra.
+            ssh = self._authenticate_with_hydra()
+            if not ssh:
+                return None
+            ssh.sendline(self._username)
+        else:
+            # Connect directly to the RPM over SSH.
+            hostname = '%s.%s' % (self.hostname, self._dns_zone)
+            cmd = RPMController.SSH_LOGIN_CMD % (self._username, hostname)
+            try:
+                ssh = pexpect.spawn(cmd)
+            except pexpect.ExceptionPexpect:
+                return None
+        # Flag to mark if we need to update password for the PDU.
+        need_update_password = False
+        # Wait for the password prompt
+        try:
+            ssh.expect(self.PASSWORD_PROMPT, timeout=60)
+            ssh.sendline(self._password)
+            # Response 0 or 1 represents a success login while 2 or 3 meaning
+            # wrong password.
+            res = ssh.expect(self.DEVICE_PROMPT + self.WRONG_PASSWORD_PROMPT,
+                             timeout=60)
+            # Handle the case if the PDU is still on default password.
+            if res == 2 or res == 3:
+                logging.info(
+                        'The password configured was incorrect, will'
+                        ' re-try with default password.', self.hostname)
+                ssh.sendline(self._default_password)
+                ssh.expect(self.DEVICE_PROMPT, timeout=60)
+                need_update_password = True
+                logging.info('Successfully logged in %s with default password',
+                             self.hostname)
+        except pexpect.ExceptionPexpect as e:
+            ssh.close()
+            logging.error('Failed to login %s, error: %s', self.hostname,
+                          str(e))
+            return None
+        # This means the device is still on default password, so we need to
+        # update it.
+        if need_update_password:
+            self._update_password(ssh)
+        return ssh
+
+    def _update_password(self, ssh):
+        logging.info('Updating password for %s', self.hostname)
+        try:
+            ssh.sendline(self.CHANGE_PASSWORD_CMD)
+            ssh.expect(self.CURRENT_PASSWORD_PROMPT,
+                       timeout=self.CHANGE_PASSWORD_TIMEOUT)
+            ssh.sendline(self._default_password)
+            ssh.expect(self.NEW_PASSWORD_PROMPT,
+                       timeout=self.CHANGE_PASSWORD_TIMEOUT)
+            ssh.sendline(self._password)
+            ssh.expect(self.VERIFY_PASSWORD_PROMPT,
+                       timeout=self.CHANGE_PASSWORD_TIMEOUT)
+            ssh.sendline(self._password)
+            ssh.expect(self.SUCCESS_MSG)
+            logging.info('Successfully updated password for %s.',
+                         self.hostname)
+        except Exception as e:
+            logging.error('Failed to update password for %s, error: %s',
+                          self.hostname, str(e))
 
     def _setup_test_user(self, ssh):
         """Configure the test user for the RPM

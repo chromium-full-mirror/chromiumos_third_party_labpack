@@ -58,7 +58,7 @@ class TestSentryRPMController(mox.MoxTestBase):
 
     def testSuccessfullyChangeOutlet(self):
         """Should return True if change was successful."""
-        prompt = ['Switched CDU:', 'Switched PDU:']
+        prompt = ['Switched CDU:', 'Switched PDU:', 'password:', 'Password:']
         password = 'admn'
         new_state = 'ON'
         self.ssh.expect('Password:', timeout=60)
@@ -75,7 +75,7 @@ class TestSentryRPMController(mox.MoxTestBase):
 
     def testUnsuccessfullyChangeOutlet(self):
         """Should return False if change was unsuccessful."""
-        prompt = ['Switched CDU:', 'Switched PDU:']
+        prompt = ['Switched CDU:', 'Switched PDU:', 'password:', 'Password:']
         password = 'admn'
         new_state = 'ON'
         self.ssh.expect('Password:', timeout=60)
