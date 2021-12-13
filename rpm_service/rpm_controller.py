@@ -562,8 +562,8 @@ class SentryRPMController(RPMController):
     # Constants for change password workflow.
     CHANGE_PASSWORD_TIMEOUT = 10
     CHANGE_PASSWORD_CMD = 'PASSWORD'
-    CURRENT_PASSWORD_PROMPT = 'Enter Current Password:'
-    NEW_PASSWORD_PROMPT = 'Enter New Password:'
+    CURRENT_PASSWORD_PROMPT = 'Current Password:'
+    NEW_PASSWORD_PROMPT = 'New Password:'
     VERIFY_PASSWORD_PROMPT = 'Verify Password:'
 
     def __init__(self, hostname, hydra_hostname=None):
