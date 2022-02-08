@@ -814,9 +814,15 @@ class ServoHost(base_servohost.BaseServoHost):
         if self.servo_recovery == True:
             environment.append("REC_MODE=1")
 
-        container_network = "default_moblab"
-        if 'drone' in docker_utils.get_running_containers(client=client):
-            container_network = "default_satlab"
+        container_network = os.environ.get("DOCKER_DEFAULT_NETWORK", None)
+        # In case the network environment is not set, fallback to default network
+        # for moblab or satlab based on the TLE.
+        if not container_network:
+            container_network = "default_moblab"
+            if 'drone' in docker_utils.get_running_containers(client=client):
+                container_network = "default_satlab"
+
+        logging.info('Servod container will use %s network', container_network)
         logging.info('Servod container environment: %s', environment)
         try:
             start_cmds = ["bash", "/start_servod.sh"]
