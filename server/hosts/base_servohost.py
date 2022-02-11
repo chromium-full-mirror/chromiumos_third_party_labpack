@@ -156,8 +156,17 @@ class BaseServoHost(ssh_host.SSHHost):
             return False
 
         if self._is_labstation is None:
-            board = self.get_board()
-            self._is_labstation = board is not None and 'labstation' in board
+            if 'labstation' in self.hostname:
+                logging.info('Based on hostname, the servohost is'
+                             ' a labstation.')
+                self._is_labstation = True
+            else:
+                logging.info(
+                        'Cannot determine if %s is a labstation from'
+                        ' hostname, getting board info from the'
+                        ' servohost.', self.hostname)
+                board = self.get_board()
+                self._is_labstation = bool(board) and 'labstation' in board
 
         return self._is_labstation
 
