@@ -1428,6 +1428,15 @@ class ServoHost(base_servohost.BaseServoHost):
         # and not guarantee the servohost is sshable.
         servo_host_ready = self.check_cached_up_status() and self.is_up()
 
+        # If the dockerized servod is in used, we can start a new servod container
+        # with out the servod process for log collection.
+        if not servo_host_ready and self.is_containerized_servod():
+            logging.info(
+                    'Start servod container without servod for log collection.'
+            )
+            self.start_containerized_servod(with_servod=False)
+            servo_host_ready = True
+
         if servo_host_ready:
             instance_ts = self.get_instance_logs_ts()
         else:
