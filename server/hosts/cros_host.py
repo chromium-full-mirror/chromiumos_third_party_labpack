@@ -1090,8 +1090,10 @@ class CrosHost(abstract_ssh.AbstractSSHHost):
             else:
                 # Host is not available, program firmware using servo
                 if ec_image:
-                    self.servo.program_ec(ec_image, rw_only)
+                    self.servo.program_ec(ec_image, rw_only, copy_image=True)
                 if bios_image:
+                    # Copy file to the servo-host.
+                    bios_image = self.servo._scp_image(bios_image)
                     # Ignore rw_only option as repair flash both.
                     self._servo_host.flash_ap_firmware_via_servo(bios_image)
                 if utils.host_is_in_lab_zone(self.hostname):
