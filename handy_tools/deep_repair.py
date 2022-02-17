@@ -87,7 +87,7 @@ def install_test_image(host):
 def validate_image_usbkey(host, expected_version):
     image_from_usbkey = host._servo_host.validate_image_usbkey()
     logging.info("Expected image on usbkey: %s. Actual image on usbkey: %s",
-                 (expected_version, image_from_usbkey))
+                 expected_version, image_from_usbkey)
     return expected_version == image_from_usbkey
 
 
