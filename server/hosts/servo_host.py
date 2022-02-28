@@ -1324,14 +1324,15 @@ class ServoHost(base_servohost.BaseServoHost):
             if self.is_containerized_servod():
                 client = docker_utils.get_docker_client()
                 container = client.containers.get(self.hostname)
-                file_stream, stat = container.get_archive(files)
-                tf = tempfile.NamedTemporaryFile(delete=False)
-                for block in file_stream:
-                    tf.write(block)
-                tf.close()
-                pw_tar = tarfile.TarFile(tf.name)
-                pw_tar.extractall(log_dir)
-                os.remove(tf.name)
+                for f in files:
+                    file_stream, stat = container.get_archive(f)
+                    tf = tempfile.NamedTemporaryFile(delete=False)
+                    for block in file_stream:
+                        tf.write(block)
+                    tf.close()
+                    pw_tar = tarfile.TarFile(tf.name)
+                    pw_tar.extractall(log_dir)
+                    os.remove(tf.name)
             else:
                 self.get_file(files, log_dir, try_rsync=False)
 
@@ -1340,6 +1341,9 @@ class ServoHost(base_servohost.BaseServoHost):
                              '%r again.', log_dir)
                 os.rmdir(log_dir)
                 return
+        except docker.errors.NotFound:
+            logging.info("Servod container %s not found no need to stop it.",
+                         self.hostname)
         except error.AutoservRunError as e:
             result = e.result_obj
             if result.exit_status != 0:
