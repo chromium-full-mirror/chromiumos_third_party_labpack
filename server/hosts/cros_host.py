@@ -1165,7 +1165,7 @@ class CrosHost(abstract_ssh.AbstractSSHHost):
                 self.servo.image_to_servo_usb(image_path=image_url,
                                               power_off_dut=False)
             except error.AutotestError as e:
-                metrics.Counter('chromeos/autotest/repair/image_to_usb_error'
+                metrics.Counter('chromeos/labpack/repair/image_to_usb_error'
                                 ).increment(
                                         fields={'host': self.hostname or ''})
                 six.reraise(error.AutotestError, str(e), sys.exc_info()[2])

@@ -551,9 +551,9 @@ class RepairAction(_DependencyNode):
         super(RepairAction, self).__init__(tag, 'repair', dependencies)
         self._trigger_list = triggers
         self._failure_modes_counter = metrics.Counter(
-            'chromeos/autotest/repair/failure_modes')
+                'chromeos/labpack/repair/failure_modes')
         self._failure_detail_counter = metrics.Counter(
-            'chromeos/autotest/repair/failure_detail')
+                'chromeos/labpack/repair/failure_detail')
         self.host_class = host_class
 
     def _record_start(self, host, silent):
@@ -899,9 +899,9 @@ class RepairStrategy(object):
         # we execute; we report on 'strategy' for every complete
         # repair operation.
         self._strategy_counter = metrics.Counter(
-            'chromeos/autotest/repair/repair_strategy_v2')
+                'chromeos/labpack/repair/repair_strategy_v2')
         self._actions_counter = metrics.Counter(
-            'chromeos/autotest/repair/repair_actions')
+                'chromeos/labpack/repair/repair_actions')
         self.host_class = host_class
         # We use the `all_verifiers` list to guarantee that our root
         # verifier will execute its dependencies in the order provided

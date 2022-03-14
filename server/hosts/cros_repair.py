@@ -209,9 +209,8 @@ class ACPowerVerifier(hosts.Verifier):
                         'model': host.host_info_store.get().model,
                         'fixed': fixed
                 }
-                metrics.Counter(
-                    'chromeos/autotest/repair/chargecontrol_fixed'
-                ).increment(fields=metrics_data)
+                metrics.Counter('chromeos/labpack/repair/chargecontrol_fixed'
+                                ).increment(fields=metrics_data)
 
             if (battery_level < cros_constants.MIN_BATTERY_LEVEL
                         and charging_state == self.BATTERY_DISCHARGING):
@@ -219,9 +218,8 @@ class ACPowerVerifier(hosts.Verifier):
                 # health profile to collect history of DUT's metrics.
                 metrics_data = {'host': host.hostname,
                                 'board': host.host_info_store.get().board}
-                metrics.Counter(
-                    'chromeos/autotest/repair/verifier/power').increment(
-                        fields=metrics_data)
+                metrics.Counter('chromeos/labpack/repair/verifier/power'
+                                ).increment(fields=metrics_data)
                 raise hosts.AutoservVerifyError(
                         'Battery is in discharging state and current level'
                         ' is less than %s%%' %
@@ -528,7 +526,7 @@ class HWIDVerifier(hosts.Verifier):
 
         if host_hwid != info_hwid:
             # We not fail verifier as it not critical for majority tests.
-            metrics.Counter('chromeos/autotest/repair/hwid_change').increment(
+            metrics.Counter('chromeos/labpack/repair/hwid_change').increment(
                     fields={
                             'host': host.hostname,
                             'board': info.board or ''

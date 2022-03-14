@@ -637,7 +637,7 @@ class _BaseDUTConnectionVerifier(hosts.Verifier):
                 # collecting metrics to look case by case
                 # TODO(otabek) for analysis b:163845694
                 data = host._get_host_metrics_data()
-                metrics.Counter('chromeos/autotest/repair/ppdut5_mv_case'
+                metrics.Counter('chromeos/labpack/repair/ppdut5_mv_case'
                                 ).increment(fields=data)
             # else:
             # servo is physical connected to the DUT
