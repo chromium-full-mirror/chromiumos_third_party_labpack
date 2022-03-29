@@ -19,7 +19,10 @@ except ImportError:
 # There are some labstations we don't want they receive auto-update,
 # e.g. labstations that used for image qualification purpose
 UPDATE_EXEMPTED_POOL = {
-        'servo_verification', 'labstation_tryjob', 'labstation_canary'
+        'servo_verification',
+        'labstation_tryjob',
+        'labstation_canary',
+        'labstation_phone_station',
 }
 
 
