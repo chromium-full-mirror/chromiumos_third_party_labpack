@@ -509,7 +509,7 @@ class _Cr50ConsoleVerifier(hosts.Verifier):
     """
 
     COMMAND_TO_CHECK_CONSOLE = (
-            'cr50_ccd_level',
+            'gsc_ccd_level',
             'cr50_testlab',
             'cr50_ccd_state_flags',
     )

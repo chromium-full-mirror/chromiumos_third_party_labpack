@@ -121,7 +121,7 @@ class firmware_Cr50CCDServoCap(Cr50Test):
         self.fast_ccd_open(enable_testlab=True)
         if not self.cr50.testlab_is_on():
             raise error.TestNAError('Cr50 testlab mode needs to be enabled')
-        logging.info('Cr50 is %s', self.servo.get('cr50_ccd_level'))
+        logging.info('Cr50 is %s', self.servo.get('gsc_ccd_level'))
         self.cr50.set_cap('UartGscTxECRx', 'Always')
         self.ec_efs_support = (
                 self.cr50.uses_board_property('BOARD_EC_CR50_COMM_SUPPORT'))
