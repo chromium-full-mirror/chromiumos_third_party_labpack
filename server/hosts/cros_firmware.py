@@ -236,13 +236,14 @@ class FirmwareRepair(hosts.RepairAction):
     def _request_for_reimage_host_to_stable_version(self, host):
         """Place request to re-image the host to the stable version.
 
-        Request will be placed by mimic PROVISION_FAILED flow.
+        Request will be placed by mimic provision-fail flow.
         @params host:   CrosHost instance
         """
         os_from_host = host.get_release_builder_path()
         os_from_host_info = host.get_cros_repair_image_name()
         if os_from_host != os_from_host_info:
             host.run('touch %s' % provisioner.PROVISION_FAILED)
+            host.run('touch %s' % provisioner.PROVISION_FAILED_MARKER)
             logging.debug('Placed request to re-image the host!')
 
 

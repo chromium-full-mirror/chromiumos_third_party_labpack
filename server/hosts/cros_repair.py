@@ -364,9 +364,8 @@ class UpdateSuccessVerifier(hosts.Verifier):
     Checks that the DUT successfully finished its last provision job.
 
     At the start of any update (e.g. for a Provision job), the code
-    creates a marker file named `PROVISION_FAILED`.  The file is located
-    in a part of the stateful partition that will be removed if an
-    update finishes successfully.  Thus, the presence of the file
+    creates a marker to tell that provision fail. The file will be removed
+    if an update finishes successfully. Thus, the presence of the file
     indicates that a prior update failed.
 
     The verifier tests for the existence of the marker file and fails if
@@ -376,11 +375,15 @@ class UpdateSuccessVerifier(hosts.Verifier):
     @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
     def verify(self, host):
         # pylint: disable=missing-docstring
-        result = host.run('test -f %s' % provisioner.PROVISION_FAILED,
-                          ignore_status=True)
-        if result.exit_status == 0:
-            raise hosts.AutoservVerifyError(
-                    'Last provision on this DUT failed')
+        def provision_fail(file_name):
+            result = host.run('test -f %s' % file_name, ignore_status=True)
+            if result.exit_status == 0:
+                logging.debug('Found file %s', file_name)
+                raise hosts.AutoservVerifyError(
+                        'Last provision on this DUT failed')
+
+        provision_fail(provisioner.PROVISION_FAILED)
+        provision_fail(provisioner.PROVISION_FAILED_MARKER)
 
     @property
     def description(self):
@@ -667,13 +670,14 @@ class RwVpdVerifier(hosts.Verifier):
     def _request_for_reimage_host_to_stable_version(self, host):
         """Place request to re-image the host to the stable version.
 
-        Request will be placed by mimic PROVISION_FAILED flow.
+        Request will be placed by mimic provision-fail flow.
         @params host:   CrosHost instance
         """
         os_from_host = host.get_release_builder_path()
         os_from_host_info = host.get_cros_repair_image_name()
         if os_from_host != os_from_host_info:
             host.run('touch %s' % provisioner.PROVISION_FAILED)
+            host.run('touch %s' % provisioner.PROVISION_FAILED_MARKER)
             logging.debug('Placed request to re-image the host!')
             raise hosts.AutoservNonCriticalVerifyError(
                     'Operation with flashrom required stable version')

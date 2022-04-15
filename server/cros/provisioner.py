@@ -38,7 +38,10 @@ _QUICK_PROVISION_SCRIPT = 'quick-provision'
 # stateful means that on successul update it will be removed.  Thus, if
 # this file exists, it indicates that we've tried and failed in a
 # previous attempt to update.
+# The file will be created every time a OS provision is kicked off.
+# TODO(b/229309510): Remove old MARKER file when new marker file is in use.
 PROVISION_FAILED = '/var/tmp/provision_failed'
+PROVISION_FAILED_MARKER = "/mnt/stateful_partition/unencrypted/provision_failed"
 
 # A flag file used to enable special handling in lab DUTs.  Some
 # parts of the system in Chromium OS test images will behave in ways
@@ -323,7 +326,7 @@ class ChromiumOSProvisioner(object):
         """
         # Summary of work, and the rationale:
         #  1. Reboot, because it's a good way to clear out problems.
-        #  2. Touch the PROVISION_FAILED file, to allow repair to detect
+        #  2. Touch the provision-fail file, to allow repair to detect
         #     failure later.
         #  3. Run the hook for host class specific preparation.
         #  4. Stop Chrome, because the system is designed to eventually
@@ -338,6 +341,7 @@ class ChromiumOSProvisioner(object):
         if not self._is_servohost:
             self.host.reboot(timeout=self.host.REBOOT_TIMEOUT)
             self._run('touch %s' % PROVISION_FAILED)
+            self._run('touch %s' % PROVISION_FAILED_MARKER)
         self.host.prepare_for_update()
         # Servohost will only update via quick provision.
         if not self._is_servohost:
@@ -480,6 +484,7 @@ class ChromiumOSProvisioner(object):
             # When the system is rolled back, the provision_failed file is
             # removed. So add it back here and re-raise the exception.
             self._run('touch %s' % PROVISION_FAILED)
+            self._run('touch %s' % PROVISION_FAILED_MARKER)
             raise
 
         logging.debug('Cleaning up old autotest directories.')
