@@ -1817,7 +1817,7 @@ class Servo(object):
                 # the time that there are more cases of '_and_' devices,
                 # this needs to be reworked.
                 dual_tag = get_fw_version_tag('ccd_flex_secondary', dut_devs[1])
-                fw = self._get_servo_type_fw_version(dut_devs[1], 'ccd_cr50')
+                fw = self._get_servo_type_fw_version(dut_devs[1], dut_devs[1])
                 fw_versions[dual_tag] = fw
         return fw_versions
 
