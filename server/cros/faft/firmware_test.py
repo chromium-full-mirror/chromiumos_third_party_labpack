@@ -26,7 +26,7 @@ from autotest_lib.server.cros.faft.utils.config import Config as FAFTConfig
 from autotest_lib.server.cros.faft.utils.faft_checkers import FAFTCheckers
 from autotest_lib.server.cros.power import utils as PowerUtils
 from autotest_lib.server.cros.servo import (chrome_base_ec, chrome_cr50,
-                                            chrome_ec, servo)
+                                            chrome_ec, chrome_ti50, servo)
 
 # Experimentally tuned time in minutes to wait for partition device nodes on a
 # USB stick to be ready after plugging in the stick.
@@ -197,19 +197,23 @@ class FirmwareTest(test.test):
         # Get pdtester console
         self.pdtester = host.pdtester
         self.pdtester_host = host._pdtester_host
-        # Check for presence of a working Cr50 console
-        if self.servo.has_control('cr50_version'):
+        gsc = None
+        if self.servo.has_control('ti50_version') or \
+            self.servo.has_control('ti50_version', 'ccd_gsc'):
+            gsc = chrome_ti50.ChromeTi50(self.servo, self.faft_config)
+        elif self.servo.has_control('cr50_version'):
+            gsc = chrome_cr50.ChromeCr50(self.servo, self.faft_config)
+        if gsc:
             try:
-                # Check that the console works before declaring the cr50 console
+                # Check that the gsc console works before declaring the
                 # connection exists and enabling uart capture.
-                cr50 = chrome_cr50.ChromeCr50(self.servo, self.faft_config)
-                cr50.get_version()
-                self.cr50 = cr50
+                gsc.get_version()
+                self.cr50 = gsc
             except servo.ControlUnavailableError:
-                logging.warn('cr50 console not supported.')
+                logging.warning('gsc console not supported.')
             except Exception as e:
-                logging.warn('Ignored unknown cr50 version error: %s', str(e))
-
+                logging.warning('Ignored unknown gsc version error: %s',
+                                str(e))
         if 'power_control' in args:
             self.power_control = args['power_control']
             if self.power_control not in host.POWER_CONTROL_VALID_ARGS:
