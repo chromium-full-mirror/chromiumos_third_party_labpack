@@ -1095,9 +1095,9 @@ class ChromeCr50(chrome_ec.ChromeConsole):
         @return: True if the AP is on; False otherwise.
         """
         ap_state = self.get_ccdstate()['AP']
-        if ap_state == 'on':
+        if ap_state.lower() == 'on':
             return True
-        elif ap_state == 'off':
+        elif ap_state.lower() == 'off':
             return False
         else:
             raise error.TestFail('Read unusable AP state from ccdstate: %r' %
