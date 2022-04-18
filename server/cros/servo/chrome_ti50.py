@@ -50,3 +50,28 @@ class ChromeTi50(chrome_cr50.ChromeCr50):
 
     def unlock_is_supported(self):
         return False
+
+    def check_boot_mode(self, mode_exp='NORMAL'):
+        """Query the Ti50 boot mode, and compare it against mode_exp.
+
+        Args:
+            mode_exp: expected boot mode. It should be either 'NORMAL'
+                      or 'NO_BOOT'.
+        Returns:
+            True if the boot mode matches mode_exp.
+            False, otherwise.
+        Raises:
+            TestError: Input parameter is not valid.
+        """
+
+        # Ti50 implements EFS 2.1, Cr50 implements EFS 2.0. This means
+        # 'NORMAL' is renamed to 'VERIFIED'. Ti50 also changes the case.
+        rv = self.send_command_retry_get_output(
+                'ec_comm', [r'boot_mode\s*:\s*(Verified|NoBoot)'], safe=True)
+        if mode_exp == 'NORMAL':
+            return rv[0][1] == 'Verified'
+        elif mode_exp == 'NO_BOOT':
+            return rv[0][1] == 'NoBoot'
+        else:
+            raise error.TestError('parameter, mode_exp is not valid: %s' %
+                                  mode_exp)
