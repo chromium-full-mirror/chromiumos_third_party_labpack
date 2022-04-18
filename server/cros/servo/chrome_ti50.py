@@ -14,6 +14,9 @@ class ChromeTi50(chrome_cr50.ChromeCr50):
     This class is to abstract these interfaces.
     """
 
+    WAKE_RESPONSE = ['(>|ti50_common)']
+    START_STR = ['ti50_common']
+
     # List of all ti50 ccd capabilities. Same order of 'ccd' output.
     # This is not the same as cr50 list.
     CAP_NAMES = [
