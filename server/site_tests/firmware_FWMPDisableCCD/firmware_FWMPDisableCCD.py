@@ -104,7 +104,8 @@ class firmware_FWMPDisableCCD(Cr50Test):
         # run ccd commands with the password. ccd open and unlock should fail
         # when the FWMP has disabled ccd.
         self.try_set_ccd_level('open', fwmp_disabled_ccd)
-        self.try_set_ccd_level('unlock', fwmp_disabled_ccd)
+        if self.cr50.unlock_is_supported():
+            self.try_set_ccd_level('unlock', fwmp_disabled_ccd)
 
         # Clear the password.
         self.open_cr50_and_setup_ccd()

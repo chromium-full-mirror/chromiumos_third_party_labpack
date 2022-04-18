@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 from autotest_lib.server.cros.servo import chrome_cr50
+from autotest_lib.client.common_lib import error
 
 
 class ChromeTi50(chrome_cr50.ChromeCr50):
@@ -40,3 +41,12 @@ class ChromeTi50(chrome_cr50.ChromeCr50):
         self.CCD_FORMAT['Capabilities'] = \
             '(Capabilities:.*(?P<Capabilities>%s))' % \
             (self.CAP_FORMAT.join(self.CAP_NAMES) + self.CAP_FORMAT)
+
+    def set_ccd_level(self, level, password=''):
+        if level == 'unlock':
+            raise error.TestError(
+                    "Ti50 does not support privilege level unlock")
+        super(ChromeTi50, self).set_ccd_level(level, password)
+
+    def unlock_is_supported(self):
+        return False
