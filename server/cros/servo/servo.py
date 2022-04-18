@@ -578,6 +578,11 @@ class Servo(object):
     # List of servos that connect to a debug header on the board.
     FLEX_SERVOS = ['c2d2', 'servo_micro', 'servo_v3']
 
+    # List of servos that rely on gsc commands for some part of dut control.
+    GSC_DRV_SERVOS = ['c2d2', 'ccd_gsc', 'ccd_cr50']
+
+    CCD_PREFIX = 'ccd_'
+
     def __init__(self, servo_host, servo_serial=None, delay_init=False):
         """Sets up the servo communication infrastructure.
 
@@ -1380,12 +1385,19 @@ class Servo(object):
         servo = self.get_servo_type()
         return 'ccd_cr50' in servo and not self.main_device_is_flex()
 
-
     def main_device_is_flex(self):
         """Whether the main servo device (no prefixes) is a legacy device."""
         servo = self.get_servo_type()
         return any([flex in servo for flex in self.FLEX_SERVOS])
 
+    def main_device_uses_gsc_drv(self):
+        """Whether the main servo device uses gsc drivers.
+
+        Servo may use gsc wp or console commands to control the dut. These
+        get restricted with ccd capabilities. This returns true if some of
+        the servo functionality will be disabled if ccd is restricted.
+        """
+        return self.get_main_servo_device() in self.GSC_DRV_SERVOS
 
     def main_device_is_active(self):
         """Return whether the main device is the active device.
