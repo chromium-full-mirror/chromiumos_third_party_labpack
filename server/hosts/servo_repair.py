@@ -527,10 +527,9 @@ class _Cr50ConsoleVerifier(hosts.Verifier):
                         sys.exc_info()[2])
 
     def _is_applicable(self, host):
-        # Only when DUT is running through ccd.
+        # Only when DUT is running through ccd or c2d2.
         # TODO(coconutruben): replace with ccd API when available in servo.py
-        return (host.get_servo()
-                and host.get_servo().get_main_servo_device() == 'ccd_cr50')
+        return host.get_servo() and host.get_servo().main_device_uses_gsc_drv()
 
     @property
     def description(self):
@@ -557,6 +556,10 @@ class _CCDTestlabVerifier(hosts.Verifier):
         status = host.get_servo().get('cr50_testlab')
         # check by 'on' to fail when get unexpected value
         if status == 'on':
+            # If servo uses cr50 to control the dut, open ccd so repair actions
+            # that reset the dut will work (cr50_reboot, cold_reset, warm_reset)
+            if host.get_servo().main_device_uses_gsc_drv():
+                host.get_servo().set_nocheck('cr50_testlab', 'open')
             # ccd testlab enabled
             return
         raise hosts.AutoservNonCriticalVerifyError(

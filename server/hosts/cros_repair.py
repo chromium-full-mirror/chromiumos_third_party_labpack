@@ -1339,8 +1339,8 @@ class ServoCr50RebootRepair(_ResetRepairAction):
         finally:
             # cr50 reset will clear some some init like `ccd testlab open`
             # so we want to re-initialize servo after cr50 reset if the main
-            # device is ccd.
-            if host.servo.main_device_is_ccd():
+            # device uses cr50 console commands.
+            if host.servo.main_device_uses_gsc_drv():
                 host.servo.initialize_dut()
 
     def _is_applicable(self, host):
