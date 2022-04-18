@@ -742,6 +742,7 @@ class Servo(object):
         # timestamp.
         return ' '.join(sversion.split()[1:4])
 
+
     def power_long_press(self):
         """Simulate a long power button press."""
         # After a long power press, the EC may ignore the next power
@@ -749,19 +750,19 @@ class Servo(object):
         # won't happen, we need to allow the EC one second to
         # collect itself.
         # long_press is defined as 8.5s in servod
-        self.set_nocheck('power_key', 'long_press')
+        self.power_key('long_press')
 
 
     def power_normal_press(self):
         """Simulate a normal power button press."""
         # press is defined as 1.2s in servod
-        self.set_nocheck('power_key', 'press')
+        self.power_key('press')
 
 
     def power_short_press(self):
         """Simulate a short power button press."""
         # tab is defined as 0.2s in servod
-        self.set_nocheck('power_key', 'tab')
+        self.power_key('tab')
 
 
     def power_key(self, press_secs='tab'):
@@ -770,7 +771,24 @@ class Servo(object):
         @param press_secs: int, float, str; time to press key in seconds or
                            known shorthand: 'tab' 'press' 'long_press'
         """
-        self.set_nocheck('power_key', press_secs)
+        # TODO(b/224804060): use the power_key control for all servo types when
+        # c2d2 has a defined power_key driver.
+        if 'c2d2' not in self.get_servo_type():
+            self.set_nocheck('power_key', press_secs)
+            return
+        if isinstance(press_secs, str):
+            if press_secs == 'tab':
+                press_secs = 0.2
+            elif press_secs == 'press':
+                press_secs = 1.2
+            elif press_secs == 'long_press':
+                press_secs = 8.5
+            else:
+                raise error.TestError('Invalid press %r' % press_secs)
+        logging.info('Manual power button press for %ds', press_secs)
+        self.set_nocheck('pwr_button', 'press')
+        time.sleep(press_secs)
+        self.set_nocheck('pwr_button', 'release')
 
 
     def pwr_button(self, action='press'):
