@@ -692,6 +692,9 @@ class Servo(object):
                     # shouldn't interfere with the test.
                     logging.exception(e)
         self._uart.start_capture()
+        # Run testlab open if servo relies on ccd to control the dut.
+        if self.main_device_uses_gsc_drv():
+            self.set_nocheck('cr50_testlab', 'open')
         if cold_reset:
             if not self.get_power_state_controller().supported:
                 logging.info('Cold-reset for DUT requested, but servo '
