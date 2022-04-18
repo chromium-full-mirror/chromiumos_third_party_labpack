@@ -13,19 +13,17 @@ class ChromeTi50(chrome_cr50.ChromeCr50):
     provides many interfaces to set and get its behavior via console commands.
     This class is to abstract these interfaces.
     """
-    # The version has four groups: the partition, the header version, debug
-    # descriptor and then version string.
-    # There are two partitions A and B. The active partition is marked with a
-    # '*'. If it is a debug image '/DBG' is added to the version string. If the
-    # image has been corrupted, the version information will be replaced with
-    # 'Error'.
-    # So the output may look something like this.
-    #   RW_A:    0.0.11 ti50 common:v0.0.1734-e5675dd9
-    #   RW_B:  * 0.0.11 ti50 common:v0.0.1734-e5675dd9
-    # Or like this if the region was corrupted.
-    #   RW_A:  * 0.0.11 ti50 common:v0.0.1734-e5675dd9
-    #   RW_B:    Empty
-    VERSION_FORMAT = '\nRW_(A|B): +%s +(\d+\.\d+\.\d+|Empty)(/DBG)?([\S ]+)?\s'
+
+    # List of all ti50 ccd capabilities. Same order of 'ccd' output.
+    # This is not the same as cr50 list.
+    CAP_NAMES = [
+            'UartGscRxAPTx', 'UartGscTxAPRx', 'UartGscRxECTx', 'UartGscTxECRx',
+            'UartGscRxFpmcuTx', 'UartGscTxFpmcuRx', 'FlashAP', 'FlashEC',
+            'OverrideWP', 'RebootECAP', 'GscFullConsole', 'UnlockNoReboot',
+            'UnlockNoShortPP', 'OpenNoTPMWipe', 'OpenNoLongPP',
+            'BatteryBypassPP', 'I2C', 'FlashRead', 'OpenNoDevMode',
+            'OpenFromUSB', 'OverrideBatt'
+    ]
 
     def __init__(self, servo, faft_config):
         """Initializes a ChromeCr50 object.
@@ -35,3 +33,7 @@ class ChromeTi50(chrome_cr50.ChromeCr50):
         """
         super(ChromeTi50, self).__init__(servo, 'cr50_uart')
         self.faft_config = faft_config
+        # Update CCD_FORMAT to use ti50 version of CAP_NAMES.
+        self.CCD_FORMAT['Capabilities'] = \
+            '(Capabilities:.*(?P<Capabilities>%s))' % \
+            (self.CAP_FORMAT.join(self.CAP_NAMES) + self.CAP_FORMAT)
