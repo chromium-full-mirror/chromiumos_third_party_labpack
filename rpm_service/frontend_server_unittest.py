@@ -9,6 +9,7 @@ import unittest
 
 import frontend_server
 import utils
+from frontend_server import DispatcherDownException
 from rpm_infrastructure_exception import RPMInfrastructureException
 
 FAKE_DISPATCHER_URI1 = 'http://fake_dispatcher:1'
@@ -182,6 +183,77 @@ class TestFrontendServer(mox.MoxTestBase):
                         '',
                         NEW_STATE,
                 ))
+        self.mox.VerifyAll()
+
+    def testUnreachableDispatcherServerNetworkDown(self):
+        """
+        Make sure that if the dispatch server is unreachable and raises an error
+        that we retry the call which will fail because there is no other servers
+        available.
+
+        The call to queue_request will raise a socket.error, and then it should
+        return False as there is no other dispatch servers available.
+        """
+        self.xmlrpc_mock.queue_request(mox.IgnoreArg(), NEW_STATE).AndRaise(
+                socket.error(FAKE_ERRNO, UNREACHABLE_SERVER_MSG))
+        frontend_server.xmlrpc_client.ServerProxy(FAKE_DISPATCHER_URI1,
+                                                  allow_none=True).AndReturn(
+                                                          self.xmlrpc_mock)
+        self.xmlrpc_mock.is_up().AndReturn(False)
+        self.mox.ReplayAll()
+        self.frontend.register_dispatcher(FAKE_DISPATCHER_URI1)
+        self.assertRaises(
+                RPMInfrastructureException,
+                self.frontend.set_power_via_rpm,
+                DUT_HOSTNAME,
+                POWERUNIT_HOSTNAME,
+                OUTLET,
+                '',
+                NEW_STATE,
+        )
+        self.mox.VerifyAll()
+
+    def testUnreachableDispatcherServerNetworkUp(self):
+        """
+        Make sure that if the dispatch server is unreachable and raises an error
+        that we retry the call which will fail because there is no other servers
+        available.
+
+        The call to queue_request will raise a socket.error, and then it should
+        return False as there is no other dispatch servers available.
+        """
+        for _ in range(0, 4):
+            self.xmlrpc_mock.queue_request(
+                    mox.IgnoreArg(), NEW_STATE).AndRaise(
+                            socket.error(FAKE_ERRNO, UNREACHABLE_SERVER_MSG))
+            frontend_server.xmlrpc_client.ServerProxy(
+                    FAKE_DISPATCHER_URI1,
+                    allow_none=True).AndReturn(self.xmlrpc_mock)
+            self.xmlrpc_mock.is_up().AndReturn(True)
+        frontend_server.xmlrpc_client.ServerProxy(FAKE_DISPATCHER_URI1,
+                                                  allow_none=True).AndReturn(
+                                                          self.xmlrpc_mock)
+        self.mox.ReplayAll()
+        self.frontend.register_dispatcher(FAKE_DISPATCHER_URI1)
+        self.assertRaises(
+                RPMInfrastructureException,
+                self.frontend.set_power_via_rpm,
+                DUT_HOSTNAME,
+                POWERUNIT_HOSTNAME,
+                OUTLET,
+                '',
+                NEW_STATE,
+        )
+        self.frontend.queue_exception_count = frontend_server.UNREACHABLE_DISPATCHER_MAX
+        self.assertRaises(
+                SystemExit,
+                self.frontend.set_power_via_rpm,
+                DUT_HOSTNAME,
+                POWERUNIT_HOSTNAME,
+                OUTLET,
+                '',
+                NEW_STATE,
+        )
         self.mox.VerifyAll()
 
 

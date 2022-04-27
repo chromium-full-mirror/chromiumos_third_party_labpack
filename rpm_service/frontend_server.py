@@ -45,6 +45,9 @@ MAPPING_FILE = os.path.join(
 # to a device, e.g. rpm_hostname, outlet, hydra_hostname, etc.
 LRU_SIZE = rpm_config.getint('RPM_INFRASTRUCTURE', 'lru_size')
 
+# Number of try exceptions allowed for unreachable before self destroy
+UNREACHABLE_DISPATCHER_MAX = 30
+
 
 class DispatcherDownException(Exception):
     """Raised when a particular RPMDispatcher is down."""
@@ -83,6 +86,9 @@ class RPMFrontendServer(object):
     @var _email_handler: Email handler to use to control email notifications.
     """
 
+    #Service server
+    service_server = None
+
     def __init__(self, email_handler=None):
         """
         RPMFrontendServer constructor.
@@ -97,6 +103,7 @@ class RPMFrontendServer(object):
         self._rpm_dict = {}
         self._rpm_info = utils.LRUCache(size=LRU_SIZE)
         self._email_handler = email_handler
+        self.queue_exception_count = 0
 
     def set_power_via_poe(self, device_hostname, new_state):
         """Sets power state of the device to the requested state via POE.
@@ -122,11 +129,7 @@ class RPMFrontendServer(object):
         logging.info('Received request to set servo: %s to state: %s',
                      device_hostname, new_state)
         powerunit_info = self._get_poe_powerunit_info(device_hostname)
-        try:
-            return self._queue_once(powerunit_info, new_state)
-        except DispatcherDownException:
-            # Retry forwarding the request.
-            return self.set_power_via_poe(device_hostname, new_state)
+        return self._queue_once_or_twice(powerunit_info, new_state)
 
     def set_power_via_rpm(self, device_hostname, rpm_hostname, rpm_outlet,
                           hydra_hostname, new_state):
@@ -165,40 +168,42 @@ class RPMFrontendServer(object):
                 outlet=rpm_outlet,
                 hydra_hostname=hydra_hostname,
         )
-        try:
-            return self._queue_once(powerunit_info, new_state)
-        except DispatcherDownException:
-            # Retry forwarding the request.
-            return self.set_power_via_rpm(device_hostname, rpm_hostname,
-                                          rpm_outlet, hydra_hostname,
-                                          new_state)
+        return self._queue_once_or_twice(powerunit_info, new_state)
 
-    def _queue_once(self, powerunit_info, new_state):
+    def _queue_once_or_twice(self, powerunit_info, new_state):
         """Queue one request to the dispatcher."""
         dispatcher_uri = self._get_dispatcher(powerunit_info)
         if not dispatcher_uri:
             # No dispatchers available.
             raise RPMInfrastructureException('No dispatchers available.')
         client = xmlrpc_client.ServerProxy(dispatcher_uri, allow_none=True)
-        try:
-            # Block on the request and return the result once it arrives.
-            return client.queue_request(powerunit_info, new_state)
-        except socket.error as er:
-            # Dispatcher Server is not reachable. Unregister it and retry.
-            logging.error("Can't reach Dispatch Server: %s. Error: %s",
-                          dispatcher_uri, errno.errorcode[er.errno])
-            if self.is_network_infrastructure_down():
-                # No dispatchers can handle this request so raise an Exception
-                # to the caller.
-                raise RPMInfrastructureException('No dispatchers can be'
-                                                 'reached.')
-            logging.info('Will attempt forwarding request to other dispatch '
-                         'servers.')
+        for _ in range(0, 2):
+            try:
+                # Block on the request and return the result once it arrives.
+                return client.queue_request(powerunit_info, new_state)
+            except socket.error as er:
+                # Dispatcher Server is not reachable. Unregister it and retry.
+                logging.error("Can't reach Dispatch Server: %s. Error: %s",
+                              dispatcher_uri, errno.errorcode[er.errno])
+                if self.is_network_infrastructure_down():
+                    # No dispatchers can handle this request so raise an Exception
+                    # to the caller.
+                    raise RPMInfrastructureException('No dispatchers can be'
+                                                     'reached.')
+
+        self.queue_exception_count += 1
+        if self.queue_exception_count <= UNREACHABLE_DISPATCHER_MAX:
             logging.error(
-                    'Unregistering %s due to error. Recommend resetting '
+                    'Unreachable dispatch server %s'
                     'that dispatch server.', dispatcher_uri)
-            self.unregister_dispatcher(dispatcher_uri)
-            raise DispatcherDownException(dispatcher_uri)
+            raise RPMInfrastructureException(
+                    'dispatcher %s is up but socket error twice'
+                    'reached.', dispatcher_uri)
+        logging.error(
+                'Unreachable dispatch server max count reached.'
+                ' self destroy frontend'
+                ' that dispatch server.%s', dispatcher_uri)
+        self.self_destroy()
 
     def is_network_infrastructure_down(self):
         """
@@ -374,6 +379,16 @@ class RPMFrontendServer(object):
         if self._email_handler:
             self._email_handler.resume_emails()
 
+    def self_destroy(self):
+        """
+        called to shutdown server or system exit
+        """
+        logging.info("Shutting down frontend server")
+        if self.service_server:
+            self.service_server.shutdown()
+        else:
+            sys.exit(1)
+
 
 if __name__ == '__main__':
     """
@@ -395,4 +410,5 @@ if __name__ == '__main__':
     server = MultiThreadedXMLRPCServer((address, port), allow_none=True)
     server.register_instance(frontend_server)
     logging.info('Listening on %s port %d', address, port)
+    frontend_server.service_server = server
     server.serve_forever()
