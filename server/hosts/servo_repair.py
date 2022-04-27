@@ -405,7 +405,7 @@ class _ServodEchoVerifier(hosts.Verifier):
     Verifier to check that the `servod` upstart job is responsible.
     """
 
-    SERVOD_INITIALIZED = 'servodtool instance show -p %d'
+    SERVOD_INITIALIZED = 'servodtool instance wait-for-active -p %d --timeout 60'
     SERVOD_RESPONSIVE = 'dut-control -p %d serialname'
 
     @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
