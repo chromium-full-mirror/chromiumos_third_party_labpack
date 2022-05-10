@@ -1179,6 +1179,23 @@ class AuditBluetooth(hosts.Verifier):
         return 'Ensure that bluetooth is working correctly on the host'
 
 
+class BootFromInternalStorage(hosts.Verifier):
+    """Verify that device booted from internal storage.
+    """
+
+    @timeout_util.TimeoutDecorator(cros_constants.VERIFY_TIMEOUT_SEC)
+    def verify(self, host):
+        # pylint: disable=missing-docstring
+        if host.is_boot_from_external_device():
+            raise hosts.AutoservRepairError(
+                    'Device booted from external storage.',
+                    'booted_from_external_storage')
+
+    @property
+    def description(self):
+        return 'Booted from internal storage.'
+
+
 class ServoKeyboardMapVerifier(hosts.Verifier):
     """Not critical verify to flash servo keyboard for the host.
 
@@ -1857,6 +1874,7 @@ def _cros_verify_extended_dag():
             (GscToolPresentVerifier, 'dut_gsctool', ('ssh', )),
             (ServoKeyboardMapVerifier, 'dut_servo_keyboard', ('ssh', )),
             (ServoMacAddressVerifier, 'dut_servo_macaddr', ('ssh', )),
+            (BootFromInternalStorage, 'boot_from_disk', ('ssh', )),
     )
 
 
@@ -1944,7 +1962,7 @@ def _cros_extended_repair_actions(provision_triggers=_CROS_PROVISION_TRIGGERS,
 def _cros_repair_actions():
     """Return the repair actions for a `CrosHost`."""
 
-    servo_reset_trigger = DEFAULT_SERVO_RESET_TRIGGER
+    servo_reset_trigger = DEFAULT_SERVO_RESET_TRIGGER + ('boot_from_disk', )
     firmware_triggers = _CROS_FIRMWARE_TRIGGERS
     ac_triggers = _CROS_AC_TRIGGERS
     usb_dependencies = _CROS_USB_DEPENDENCIES

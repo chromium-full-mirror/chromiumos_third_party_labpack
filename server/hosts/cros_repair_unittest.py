@@ -47,6 +47,7 @@ CROS_VERIFY_DAG = (
         (cros_repair.ServoKeyboardMapVerifier, 'dut_servo_keyboard',
          ('ssh', )),
         (cros_repair.ServoMacAddressVerifier, 'dut_servo_macaddr', ('ssh', )),
+        (cros_repair.BootFromInternalStorage, 'boot_from_disk', ('ssh', )),
 )
 
 CROS_REPAIR_ACTIONS = (
@@ -55,14 +56,10 @@ CROS_REPAIR_ACTIONS = (
                 'ssh',
                 'power',
         )),
-        (cros_repair.ServoResetRepair, 'servoreset', (), (
-                'ping',
-                'ssh',
-                'stop_start_ui',
-                'power',
-        )),
+        (cros_repair.ServoResetRepair, 'servoreset', (),
+         ('ping', 'ssh', 'stop_start_ui', 'power', 'boot_from_disk')),
         (cros_repair.ServoCr50RebootRepair, 'cr50_reset', (),
-         ('ping', 'ssh', 'stop_start_ui', 'power')),
+         ('ping', 'ssh', 'stop_start_ui', 'power', 'boot_from_disk')),
         (cros_repair.ServoSysRqRepair, 'sysrq', (), (
                 'ping',
                 'ssh',
