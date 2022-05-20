@@ -628,6 +628,13 @@ class _BaseDUTConnectionVerifier(hosts.Verifier):
 
         @returns: bool
         """
+        logging.debug('Check the type-c status from the dut')
+        # Get some debug information about each type c port.
+        try:
+            logging.info(host.dut_run('ectool typecstatus 0', timeout=50))
+            logging.info(host.dut_run('ectool typecstatus 1', timeout=50))
+        except Exception as e:
+            logging.info('Ignoring typecstatus error %r', e)
         logging.debug('Started check by ppdut5_mv:on')
         try:
             val = host.get_servo().get('ppdut5_mv')
