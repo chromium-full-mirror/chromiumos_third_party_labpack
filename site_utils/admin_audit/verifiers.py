@@ -189,7 +189,7 @@ class VerifyServoUsb(base._BaseServoVerifier):
         @params host:   Host where USB drive mounted
         @params usb:    Path to USB drive. (e.g. /dev/sda)
         """
-        command = 'badblocks -w -e 100 -b 4096 -t random %s' % usb
+        command = 'badblocks -w -e 300 -b 4096 -t random %s' % usb
         logging.info('Running command: %s', command)
         # The response is the list of bad block on USB.
         # Extended time for 2 hour to run USB verification.
