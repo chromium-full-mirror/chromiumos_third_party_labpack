@@ -130,10 +130,12 @@ class VerifyServoUsb(base._BaseServoVerifier):
                 logging.info('Try run check on DUT side.')
                 state = self._run_check_on_host(self._dut_host, dut_usb)
             else:
-                logging.info('Try run check on ServoHost side.')
-                servo = self.get_host().get_servo()
-                servo_usb = servo.probe_host_usb_dev()
-                state = self._run_check_on_host(self.get_host(), servo_usb)
+                # Blocked by b/234767780
+                logging.info('Verification from ServoHost blocked.')
+                # logging.info('Try run check on ServoHost side.')
+                # servo = self.get_host().get_servo()
+                # servo_usb = servo.probe_host_usb_dev()
+                # state = self._run_check_on_host(self.get_host(), servo_usb)
         except Exception as e:
             if 'Timeout encountered:' in str(e):
                 logging.info('Timeout during running action')
@@ -220,6 +222,8 @@ class VerifyServoUsb(base._BaseServoVerifier):
     def _set_state(self, state):
         if state:
             self._set_host_info_state(constants.SERVO_USB_STATE_PREFIX, state)
+        else:
+            logging.info('The new state for usb-drive is not specified.')
 
 
 class VerifyServoFw(base._BaseServoVerifier):
