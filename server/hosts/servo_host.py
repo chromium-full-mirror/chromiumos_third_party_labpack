@@ -1047,6 +1047,12 @@ class ServoHost(base_servohost.BaseServoHost):
             logging.info('Servo reset is not applicable to servo_v3.')
             return
 
+        # Power-cycle servo_v4p1 may cause image usbkey detection issue.
+        # See b/237803612.
+        if "SERVOV4P1" in self.servo_serial:
+            logging.info("Servo reset is disabled to servo_v4p1.")
+            return
+
         pre_reset_devnum = self._get_servo_usb_devnum()
         logging.info('Servo usb devnum before reset: %s', pre_reset_devnum)
         result = self._reset_servo()
