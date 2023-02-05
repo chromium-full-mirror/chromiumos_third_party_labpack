@@ -1397,7 +1397,7 @@ class CrosRebootRepair(repair_utils.RebootRepair):
         # pylint: disable=missing-docstring
         # N.B. We need to reboot regardless of whether clearing
         # dev_mode succeeds or fails.
-        host.run('/usr/share/vboot/bin/set_gbb_flags.sh 0',
+        host.run('/usr/bin/futility gbb --set --flash --flags=0',
                  ignore_status=True)
         host.run('crossystem disable_dev_request=1',
                  ignore_status=True)
