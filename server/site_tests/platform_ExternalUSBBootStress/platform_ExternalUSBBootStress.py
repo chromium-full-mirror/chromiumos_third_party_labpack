@@ -90,7 +90,7 @@ class platform_ExternalUSBBootStress(test.test):
         for i in xrange(reboots):
             # We want fast boot past the dev screen
             if not skip_gbb:
-                host.run('/usr/share/vboot/bin/set_gbb_flags.sh 0x01')
+                host.run('/usr/bin/futility gbb --flash --set --flags=0x01')
             stressor = stress.ControlledStressor(stress_hotplug)
             logging.info('Reboot iteration %d of %d' % (i + 1, reboots))
             if skip_gbb:
