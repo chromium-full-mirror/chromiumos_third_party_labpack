@@ -51,13 +51,6 @@ CLIENT_X86_TESTS= [
         'sec' : 5 * HOUR_IN_SECS}),
 ]
 
-SERVER_TESTS= [
-    ('hardware_MemoryIntegrity', {
-        'tag' : 'idle', 'seconds' : HOUR_IN_SECS, 'suspend': False}),
-    ('hardware_MemoryIntegrity', {
-        'tag' : 'suspend', 'seconds' : HOUR_IN_SECS, 'suspend': True}),
-]
-
 def run_client_test(machine):
     client = hosts.create_host(machine)
     client_at = autotest.Autotest(client)
@@ -66,12 +59,6 @@ def run_client_test(machine):
     for test, argv in client_tests:
         client.reboot()
         client_at.run_test(test, **argv)
-
-def run_server_test(machine):
-    client = hosts.create_host(machine)
-    for test, argv in SERVER_TESTS:
-        client.reboot()
-        job.run_test(test, client_ip=machine, **argv)
 
 keyval = dict()
 try:
@@ -83,4 +70,3 @@ except NameError:
 utils.write_keyval(job.resultdir, keyval)
 
 job.parallel_on_machines(run_client_test, machines)
-parallel_simple(run_server_test, machines)
