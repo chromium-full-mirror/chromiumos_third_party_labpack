@@ -57,7 +57,7 @@ class verity_image(object):
     """
     # Define the command template constants.
     verity_cmd = \
-        'verity mode=create alg=%s payload=%s payload_blocks=%d hashtree=%s'
+        'verity --mode=create --alg=%s --payload=%s --payload_blocks=%d --hashtree=%s'
     dd_cmd = 'dd if=/dev/zero of=%s bs=4096 count=0 seek=%d'
     mkfs_cmd = 'mkfs.ext3 -b 4096 -F %s'
     dmsetup_cmd = "dmsetup -r create autotest_%s --table '%s'"
