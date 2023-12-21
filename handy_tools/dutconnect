@@ -224,7 +224,7 @@ dut-control -p ${servo_port} --get-all"
         ssh -tt "$servo_host" "
 
 stop servod PORT=${servo_port}
-(timeout 5m servod --debug --port=${servo_port} --serial=${servo_serial} --recovery_mode)&
+(timeout 5m servod --debug --port=${servo_port} --serial=${servo_serial} --servo-recovery)&
 
 sleep 10
 
