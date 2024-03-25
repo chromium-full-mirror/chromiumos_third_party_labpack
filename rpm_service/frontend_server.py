@@ -1,5 +1,5 @@
 #!/usr/bin/python2
-# Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
+# Copyright 2012 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -36,11 +36,6 @@ DEFAULT_RPM_ID = rpm_config.get('RPM_INFRASTRUCTURE', 'default_rpm_id')
 # Valid state values.
 VALID_STATE_VALUES = ['ON', 'OFF', 'CYCLE']
 
-# Servo-interface mapping file
-MAPPING_FILE = os.path.join(
-        os.path.dirname(__file__),
-        rpm_config.get('CiscoPOE', 'servo_interface_mapping_file'))
-
 # Size of the LRU that holds power management unit information related
 # to a device, e.g. rpm_hostname, outlet, hydra_hostname, etc.
 LRU_SIZE = rpm_config.getint('RPM_INFRASTRUCTURE', 'lru_size')
@@ -75,13 +70,10 @@ class RPMFrontendServer(object):
                 manipulating the same data.
     @var _rpm_dict: Maps rpm hostname's to an already assigned dispatcher
                     server.
-    @var _mapping_last_modified: Last-modified time of the servo-interface
-                                 mapping file.
-    @var _servo_interface: Maps servo hostname to (switch_hostname, interface).
     @var _rpm_info: An LRU cache to hold recently visited rpm information
                     so that we don't hit AFE too often. The elements in
                     the cache are instances of PowerUnitInfo indexed by
-                    dut hostnames. POE info is not stored in the cache.
+                    dut hostnames.
     @var _afe: AFE instance to talk to autotest. Used to retrieve rpm hostname.
     @var _email_handler: Email handler to use to control email notifications.
     """
@@ -98,44 +90,16 @@ class RPMFrontendServer(object):
         self._dispatcher_minheap = []
         self._entry_dict = {}
         self._lock = threading.Lock()
-        self._mapping_last_modified = os.path.getmtime(MAPPING_FILE)
-        self._servo_interface = utils.load_servo_interface_mapping()
         self._rpm_dict = {}
         self._rpm_info = utils.LRUCache(size=LRU_SIZE)
         self._email_handler = email_handler
         self.queue_exception_count = 0
 
-    def set_power_via_poe(self, device_hostname, new_state):
-        """Sets power state of the device to the requested state via POE.
-
-        @param device_hostname: Hostname of the servo to control.
-        @param new_state: [ON, OFF, CYCLE] State to which we want to set the
-                          device's outlet to.
-
-        @return: True if the attempt to change power state was successful,
-                 False otherwise.
-
-        @raise RPMInfrastructureException: No dispatchers are available or can
-                                           be reached.
-        """
-        # Remove any DNS Zone information and simplify down to just the hostname.
-        device_hostname = device_hostname.split('.')[0]
-        new_state = new_state.upper()
-        if new_state not in VALID_STATE_VALUES:
-            logging.error(
-                    'Received request to set servo %s to invalid '
-                    'state %s', device_hostname, new_state)
-            return False
-        logging.info('Received request to set servo: %s to state: %s',
-                     device_hostname, new_state)
-        powerunit_info = self._get_poe_powerunit_info(device_hostname)
-        return self._queue_once_or_twice(powerunit_info, new_state)
-
     def set_power_via_rpm(self, device_hostname, rpm_hostname, rpm_outlet,
                           hydra_hostname, new_state):
         """Sets power state of a device to the requested state via RPM.
 
-        Unlike the special case of POE, powerunit information is not available
+        Powerunit information is not available
         on the RPM server, so must be provided as arguments.
 
         @param device_hostname: Hostname of the servo to control.
@@ -229,50 +193,17 @@ class RPMFrontendServer(object):
                       'status or all dispatchers are down.')
         return True
 
-    def _get_poe_powerunit_info(self, device_hostname):
-        """Get the power management unit information for a POE controller.
-
-        Servo is managed by POE. The related information we need to know
-        include poe hostname, poe interface. Such information is
-        stored in a local file and read into memory.
-
-        @param device_hostname: A string representing the device's hostname.
-
-        @returns: A PowerUnitInfo object.
-        @raises RPMInfrastructureException if failed to get the power
-                unit info.
-
-        """
-        with self._lock:
-            reload_info = utils.reload_servo_interface_mapping_if_necessary(
-                    self._mapping_last_modified)
-            if reload_info:
-                self._mapping_last_modified, self._servo_interface = reload_info
-            switch_if_tuple = self._servo_interface.get(device_hostname)
-            if not switch_if_tuple:
-                raise RPMInfrastructureException(
-                        'Could not determine POE hostname for %s. '
-                        'Please check the servo-interface mapping file.',
-                        device_hostname)
-            else:
-                return utils.PowerUnitInfo(
-                        device_hostname=device_hostname,
-                        powerunit_type=utils.PowerUnitInfo.POWERUNIT_TYPES.POE,
-                        powerunit_hostname=switch_if_tuple[0],
-                        outlet=switch_if_tuple[1],
-                        hydra_hostname=None)
-
     def _get_dispatcher(self, powerunit_info):
         """
         Private method that looks up or assigns a dispatcher server
-        responsible for communicating with the given RPM/POE.
+        responsible for communicating with the given RPM.
 
         Will also call _check_dispatcher to make sure it is up before returning
         it.
 
         @param powerunit_info: A PowerUnitInfo instance.
 
-        @return: URI of dispatcher server responsible for the rpm/poe.
+        @return: URI of dispatcher server responsible for the rpm.
                  None if no dispatcher servers are available.
         """
         powerunit_type = powerunit_info.powerunit_type
