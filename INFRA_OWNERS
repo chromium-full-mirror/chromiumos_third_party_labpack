@@ -18,7 +18,5 @@ xianuowang@google.com
 xixuan@chromium.org
 xixuan@google.com
 
-include chromiumos/chromite:/OWNERS.testplatform
-
 # Core Infra Team
 dbeckett@chromium.org
