@@ -1,3 +1,0 @@
-ppdut5_mv
-image_usbkey_direction
-image_usbkey_pwr

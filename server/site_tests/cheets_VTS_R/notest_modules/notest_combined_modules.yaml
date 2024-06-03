@@ -1,2 +1,0 @@
-vts_linux_kselftest_arm_: [x86]
-vts_linux_kselftest_x86_: [arm]
